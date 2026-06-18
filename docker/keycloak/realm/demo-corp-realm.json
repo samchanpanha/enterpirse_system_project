@@ -1,0 +1,246 @@
+{
+  "realm": "demo-corp",
+  "enabled": true,
+  "displayName": "Demo Corp",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Demo Corp</span></div>",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "sslRequired": "none",
+  "verifyEmail": false,
+  "loginTheme": "keycloak",
+  "accountTheme": "keycloak",
+  "adminTheme": "keycloak",
+  "emailTheme": "keycloak",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "km"],
+  "defaultLocale": "en",
+  "eventsEnabled": true,
+  "eventsExpiration": 2592000,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "attributes": {
+    "tenantId": "00000000-0000-0000-0000-000000000001"
+  },
+  "users": [
+    {
+      "username": "admin@demo.com",
+      "email": "admin@demo.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo123!",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenantId": ["00000000-0000-0000-0000-000000000001"],
+        "defaultBranchId": ["00000000-0000-0000-0000-000000000010"]
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Default user role"
+      },
+      {
+        "name": "admin",
+        "description": "Tenant admin"
+      },
+      {
+        "name": "branch-manager",
+        "description": "Branch manager role"
+      },
+      {
+        "name": "cashier",
+        "description": "Cashier role"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "report-system-web",
+      "enabled": true,
+      "publicClient": true,
+      "rootUrl": "http://localhost:3000",
+      "adminUrl": "",
+      "baseUrl": "http://localhost:3000",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": ["+"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "tenantId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenantId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "tenantId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "defaultBranchId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "defaultBranchId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "defaultBranchId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "roles",
+            "multivalued": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "report-system-api",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "secret": "report-system-api-secret-change-me",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "tenantId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenantId",
+            "access.token.claim": "true",
+            "claim.name": "tenantId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "defaultBranchId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "defaultBranchId",
+            "access.token.claim": "true",
+            "claim.name": "defaultBranchId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+ "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "multivalued": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "report-system-cli",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "report-system-cli-secret-change-me",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "tenantId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenantId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "tenantId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "defaultBranchId",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "defaultBranchId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "defaultBranchId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "roles",
+            "multivalued": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

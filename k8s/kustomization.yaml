@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Report_System Kubernetes manifests
+# Apply with:  kubectl apply -k k8s/
+# Or:          kubectl apply -f k8s/namespace.yaml -f k8s/configmap.yaml -f k8s/secrets.yaml -f k8s/postgres-stack.yaml -f k8s/kafka-stack.yaml -f k8s/service-stack.yaml -f k8s/ingress.yaml -f k8s/hpa.yaml
+
+namespace: report-system
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - postgres-stack.yaml
+  - kafka-stack.yaml
+  - service-stack.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: report-system
+  app.kubernetes.io/managed-by: kustomize

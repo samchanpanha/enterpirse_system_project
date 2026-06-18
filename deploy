@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Cross-platform wrapper — dispatches to deploy.sh (mac/linux) or deploy.ps1 (windows-via-pwsh)
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT="$SCRIPT_DIR/docker/scripts/deploy.sh"
+
+if [[ -f "$SCRIPT" ]]; then
+  bash "$SCRIPT" "$@"
+else
+  echo "deploy.sh not found at $SCRIPT" >&2
+  exit 1
+fi

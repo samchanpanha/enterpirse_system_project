@@ -1,0 +1,49 @@
+name: Finance Service CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/finance-service/**'
+      - 'shared/**'
+      - 'pom.xml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/finance-service/**'
+      - 'shared/**'
+      - 'pom.xml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: report_user
+          POSTGRES_PASSWORD: report_pass
+          POSTGRES_DB: finance_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build and test finance-service
+        run: |
+          mvn clean compile -pl services/finance-service -am -DskipTests
+          mvn test -pl services/finance-service
+      - name: Build Docker image
+        run: |
+          mvn package -pl services/finance-service -am -DskipTests
+          docker build -t reportsystem/finance-service:latest -f services/finance-service/Dockerfile .

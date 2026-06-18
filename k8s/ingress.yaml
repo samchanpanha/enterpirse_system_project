@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: report-system-ingress
+  namespace: report-system
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.reportsystem.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8080
+    - host: app.reportsystem.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nuxt-web
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - api.reportsystem.local
+        - app.reportsystem.local
+      secretName: reportsystem-tls

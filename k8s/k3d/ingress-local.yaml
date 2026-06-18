@@ -1,0 +1,31 @@
+# Local Traefik ingress for k3d
+# Access: api.reportsystem.local:8080 → Gateway (port 80 → 8080 via k3d LB)
+# Access: app.reportsystem.local:8080 → Nuxt (port 80 → 8080 via k3d LB)
+# Add to /etc/hosts: 127.0.0.1 api.reportsystem.local app.reportsystem.local
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: report-system-ingress
+  namespace: report-system
+spec:
+  rules:
+    - host: api.reportsystem.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8080
+    - host: app.reportsystem.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nuxt-web
+                port:
+                  number: 3000

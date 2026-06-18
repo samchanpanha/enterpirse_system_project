@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: report-system-config
+  namespace: report-system
+data:
+  # Infrastructure
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka:8761/eureka/"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+
+  # PostgreSQL per service
+  AUTH_DB_URL: "jdbc:postgresql://postgres-auth:5432/auth_db"
+  PROPERTY_DB_URL: "jdbc:postgresql://postgres-property:5432/property_db"
+  RESTAURANT_DB_URL: "jdbc:postgresql://postgres-restaurant:5432/restaurant_db"
+  INVENTORY_DB_URL: "jdbc:postgresql://postgres-inventory:5432/inventory_db"
+  FINANCE_DB_URL: "jdbc:postgresql://postgres-finance:5432/finance_db"
+  PAYMENT_DB_URL: "jdbc:postgresql://postgres-payment:5432/payment_db"
+  REPORTING_DB_URL: "jdbc:postgresql://postgres-reporting:5432/reporting_db"
+
+  # Nuxt frontend
+  NUXT_PUBLIC_API_BASE_URL: "http://gateway:8080"

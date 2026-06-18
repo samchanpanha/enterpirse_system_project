@@ -1,0 +1,621 @@
+# Eureka Service Discovery + API Gateway + 7 Microservices + Nuxt Frontend
+# All services use database-per-service PostgreSQL instances
+
+---
+# ── Eureka Server ──────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka
+  namespace: report-system
+spec:
+  ports:
+    - port: 8761
+  selector:
+    app: eureka
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka
+  template:
+    metadata:
+      labels:
+        app: eureka
+    spec:
+      containers:
+        - name: eureka
+          image: reportsystem/eureka-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8761
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+# ── API Gateway ───────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: report-system
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: reportsystem/api-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+# ── Template: Microservice Deployment ─────────────────────────
+# Each service follows the same pattern with service-specific DB URL and port
+# Ports: auth=8081, property=8082, restaurant=8083, inventory=8084,
+#        finance=8085, payment=8086, reporting=8087
+
+---
+# Auth Service (8081)
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8081
+  selector:
+    app: auth-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: reportsystem/auth-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: AUTH_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: JWT_SECRET
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Property Service (8082)
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8082
+  selector:
+    app: property-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: property-service
+  template:
+    metadata:
+      labels:
+        app: property-service
+    spec:
+      containers:
+        - name: property
+          image: reportsystem/property-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: PROPERTY_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Restaurant Service (8083)
+apiVersion: v1
+kind: Service
+metadata:
+  name: restaurant-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8083
+  selector:
+    app: restaurant-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: restaurant-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: restaurant-service
+  template:
+    metadata:
+      labels:
+        app: restaurant-service
+    spec:
+      containers:
+        - name: restaurant
+          image: reportsystem/restaurant-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: RESTAURANT_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Inventory Service (8084)
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8084
+  selector:
+    app: inventory-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory
+          image: reportsystem/inventory-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: INVENTORY_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Finance Service (8085)
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8085
+  selector:
+    app: finance-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: finance-service
+  template:
+    metadata:
+      labels:
+        app: finance-service
+    spec:
+      containers:
+        - name: finance
+          image: reportsystem/finance-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8085
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: FINANCE_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Payment Service (8086)
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8086
+  selector:
+    app: payment-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment
+          image: reportsystem/payment-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: PAYMENT_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Reporting Service (8087)
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: report-system
+spec:
+  ports:
+    - port: 8087
+  selector:
+    app: reporting-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+    spec:
+      containers:
+        - name: reporting
+          image: reportsystem/reporting-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8087
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: REPORTING_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: report-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 512Mi
+
+---
+# Nuxt Frontend (3000)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nuxt-web
+  namespace: report-system
+spec:
+  ports:
+    - port: 3000
+  selector:
+    app: nuxt-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nuxt-web
+  namespace: report-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nuxt-web
+  template:
+    metadata:
+      labels:
+        app: nuxt-web
+    spec:
+      containers:
+        - name: nuxt
+          image: reportsystem/nuxt-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: report-system-config
+                  key: NUXT_PUBLIC_API_BASE_URL
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

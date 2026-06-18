@@ -1,0 +1,32 @@
+name: Gateway CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'infrastructure/gateway/**'
+      - 'shared/**'
+      - 'pom.xml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infrastructure/gateway/**'
+      - 'shared/**'
+      - 'pom.xml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build gateway
+        run: |
+          mvn clean compile -pl infrastructure/gateway -am -DskipTests
+          mvn package -pl infrastructure/gateway -am -DskipTests
+          docker build -t reportsystem/api-gateway:latest -f infrastructure/gateway/Dockerfile .

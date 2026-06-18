@@ -1,0 +1,317 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: report-postgres
+    environment:
+      POSTGRES_USER: report_user
+      POSTGRES_PASSWORD: report_pass
+      POSTGRES_DB: report_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/scripts/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U report_user -d report_system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: report-kafka
+    depends_on:
+      kafka-zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  kafka-zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: report-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 | grep Mode"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: report-redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: report-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: report-zipkin
+    ports:
+      - "9411:9411"
+
+  postgres-keycloak:
+    image: postgres:16-alpine
+    container_name: report-postgres-keycloak
+    environment:
+      POSTGRES_USER: report_user
+      POSTGRES_PASSWORD: report_pass
+      POSTGRES_DB: keycloak_db
+    volumes:
+      - keycloak-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U report_user -d keycloak_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    command: ["start-dev", "--import-realm", "--http-enabled=true", "--hostname-strict=false"]
+    container_name: report-keycloak
+    ports:
+      - "8180:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloak_db
+      KC_DB_USERNAME: report_user
+      KC_DB_PASSWORD: report_pass
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+    volumes:
+      - ./docker/keycloak/realm:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  eureka:
+    build:
+      context: .
+      dockerfile: infrastructure/eureka/Dockerfile
+    container_name: report-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/gateway/Dockerfile
+    container_name: report-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      auth-service:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=demo-corp
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_REALM_TENANT_MAPPING=demo-corp=00000000-0000-0000-0000-000000000001
+      - AUTH_SERVICE_URL=http://auth-service:8081
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: report-auth
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auth_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+
+  property-service:
+    build:
+      context: .
+      dockerfile: services/property-service/Dockerfile
+    container_name: report-property
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/property_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+
+  restaurant-service:
+    build:
+      context: .
+      dockerfile: services/restaurant-service/Dockerfile
+    container_name: report-restaurant
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/restaurant_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    container_name: report-inventory
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventory_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+  finance-service:
+    build:
+      context: .
+      dockerfile: services/finance-service/Dockerfile
+    container_name: report-finance
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/finance_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: services/payment-service/Dockerfile
+    container_name: report-payment
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payment_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: services/reporting-service/Dockerfile
+    container_name: report-reporting
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/reporting_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+
+  nuxt-web:
+    build:
+      context: frontend/report-system-web
+      dockerfile: Dockerfile
+    container_name: report-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+    environment:
+      - NUXT_PUBLIC_API_BASE_URL=http://gateway:8080
+      - NUXT_API_BASE_URL=http://gateway:8080
+      - NUXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
+      - NUXT_PUBLIC_KEYCLOAK_REALM=demo-corp
+      - NUXT_PUBLIC_KEYCLOAK_CLIENT_ID=report-system-web
+
+volumes:
+  postgres-data:
+  keycloak-pg-data:
+  minio-data:

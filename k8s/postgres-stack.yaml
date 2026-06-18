@@ -1,0 +1,394 @@
+# PostgreSQL per microservice — 7 StatefulSets
+# Each service gets its own database for true isolation (database-per-service pattern)
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-auth
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-auth
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-auth
+  namespace: report-system
+spec:
+  serviceName: postgres-auth
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-auth
+  template:
+    metadata:
+      labels:
+        app: postgres-auth
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "auth_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-property
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-property
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-property
+  namespace: report-system
+spec:
+  serviceName: postgres-property
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-property
+  template:
+    metadata:
+      labels:
+        app: postgres-property
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "property_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-restaurant
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-restaurant
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-restaurant
+  namespace: report-system
+spec:
+  serviceName: postgres-restaurant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-restaurant
+  template:
+    metadata:
+      labels:
+        app: postgres-restaurant
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "restaurant_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-inventory
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-inventory
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-inventory
+  namespace: report-system
+spec:
+  serviceName: postgres-inventory
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-inventory
+  template:
+    metadata:
+      labels:
+        app: postgres-inventory
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "inventory_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-finance
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-finance
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-finance
+  namespace: report-system
+spec:
+  serviceName: postgres-finance
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-finance
+  template:
+    metadata:
+      labels:
+        app: postgres-finance
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "finance_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-payment
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-payment
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-payment
+  namespace: report-system
+spec:
+  serviceName: postgres-payment
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-payment
+  template:
+    metadata:
+      labels:
+        app: postgres-payment
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "payment_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-reporting
+  namespace: report-system
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres-reporting
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-reporting
+  namespace: report-system
+spec:
+  serviceName: postgres-reporting
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-reporting
+  template:
+    metadata:
+      labels:
+        app: postgres-reporting
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "reporting_db"
+          envFrom:
+            - secretRef:
+                name: report-system-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
