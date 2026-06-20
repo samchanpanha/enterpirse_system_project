@@ -14,6 +14,7 @@ import lombok.*;
 public class GatewayLogEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
     @Column(name = "transaction_id") private UUID transactionId;
+    @Column(name = "branch_id", nullable = false) private UUID branchId;
     private String gateway; @Column(name = "request_body", columnDefinition = "TEXT") private String requestBody;
     @Column(name = "response_body", columnDefinition = "TEXT") private String responseBody;
     @Column(name = "http_status") private Integer httpStatus;

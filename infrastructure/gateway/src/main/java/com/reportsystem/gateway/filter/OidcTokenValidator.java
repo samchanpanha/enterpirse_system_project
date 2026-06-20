@@ -14,6 +14,7 @@ import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +29,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.server.WebFilter;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import org.springframework.core.ParameterizedTypeReference;
@@ -83,10 +85,10 @@ public class OidcTokenValidator implements WebFilter {
                 }
             }
         }
-        this.validationCache = new LinkedHashMap<>() {
+        this.validationCache = new LinkedHashMap<String, CachedValidation>() {
             @Override
             protected boolean removeEldestEntry(java.util.Map.Entry<String, CachedValidation> eldest) {
-                return size() > 10000;  // 10K entries max
+                return size() > 10000;
             }
         };
     }
@@ -319,11 +321,15 @@ public class OidcTokenValidator implements WebFilter {
                         String n = (String) key.get("n");
                         String e = (String) key.get("e");
                         if (n == null || e == null) continue;
-                        BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(n));
-                        BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(e));
-                        RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
-                        PublicKey pk = KeyFactory.getInstance("RSA").generatePublic(spec);
-                        newJwks.put(keyKid, pk);
+                        try {
+                            BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(n));
+                            BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(e));
+                            RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
+                            PublicKey pk = KeyFactory.getInstance("RSA").generatePublic(spec);
+                            newJwks.put(keyKid, pk);
+                        } catch (Exception ex) {
+                            log.warn("Failed to parse JWK key {}: {}", keyKid, ex.getMessage());
+                        }
                     }
                 }
 
@@ -339,7 +345,7 @@ public class OidcTokenValidator implements WebFilter {
         return webClient.get()
             .uri(url)
             .retrieve()
-            .bodyToMono(new ParameterizedTypeReference<>() {})
+            .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
             .timeout(Duration.ofSeconds(5))
             .retryWhen(Retry.backoff(2, Duration.ofMillis(200))
                 .maxBackoff(Duration.ofSeconds(1))

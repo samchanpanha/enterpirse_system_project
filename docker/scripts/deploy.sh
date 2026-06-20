@@ -39,7 +39,6 @@ SERVICES=(
   eureka gateway
   auth-service property-service restaurant-service inventory-service
   finance-service payment-service reporting-service
-  nuxt-web
 )
 
 # ─── Colors ──────────────────────────────────────────────────────────────────
@@ -237,7 +236,7 @@ prod_push() {
     case "$svc" in
       eureka)         dockerfile="infrastructure/eureka/Dockerfile" ;;
       gateway)        dockerfile="infrastructure/gateway/Dockerfile" ;;
-      nuxt-web)       dockerfile="frontend/report-system-web/Dockerfile" ;;
+
       *)              dockerfile="services/$svc/Dockerfile" ;;
     esac
     local img="$push_reg/$svc:$IMAGE_TAG"

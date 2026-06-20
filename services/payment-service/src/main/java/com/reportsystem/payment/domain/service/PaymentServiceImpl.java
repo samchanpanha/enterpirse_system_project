@@ -30,7 +30,7 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentGatewayPort.GatewayResult result = gatewayAdapter.process(tx);
         String status = result.success() ? "completed" : "failed";
         String gatewayRef = result.gatewayRef();
-        logRepo.save(GatewayLog.builder().id(UUID.randomUUID()).transactionId(tx.getId()).gateway(tx.getGateway()).requestBody("{}").responseBody(result.rawResponse()).success(result.success()).errorMessage(result.errorMessage()).createdAt(Instant.now()).build());
+        logRepo.save(GatewayLog.builder().id(UUID.randomUUID()).transactionId(tx.getId()).branchId(tx.getBranchId()).gateway(tx.getGateway()).requestBody("{}").responseBody(result.rawResponse()).success(result.success()).errorMessage(result.errorMessage()).createdAt(Instant.now()).build());
         return txRepo.save(Transaction.builder().id(tx.getId()).tenantId(tx.getTenantId()).branchId(tx.getBranchId()).transactionId(tx.getTransactionId()).invoiceId(tx.getInvoiceId()).amount(tx.getAmount()).currency(tx.getCurrency()).gateway(tx.getGateway()).gatewayRef(gatewayRef).method(tx.getMethod()).status(status).customerName(tx.getCustomerName()).customerPhone(tx.getCustomerPhone()).sourceType(tx.getSourceType()).sourceId(tx.getSourceId()).metadata(tx.getMetadata()).paidAt(result.success() ? Instant.now() : null).createdAt(tx.getCreatedAt()).updatedAt(Instant.now()).build());
     }
     @Override public Transaction refundTransaction(UUID transactionId, BigDecimal amount, String reason, UUID createdBy) {

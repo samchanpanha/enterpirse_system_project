@@ -27,28 +27,24 @@ SERVICE_NAMES=(
   eureka gateway
   auth-service property-service restaurant-service
   inventory-service finance-service payment-service reporting-service
-  nuxt-web
 )
 SERVICE_PORTS=(
   5432 5432 9092 6379 8180
   8761 8080
   8081 8082 8083
   8084 8085 8086 8087
-  3000
 )
 CHECK_TYPES=(
   tcp tcp tcp tcp http
   http http
   http http http
   http http http http
-  http
 )
 SERVICE_PATHS=(
   "" "" "" "" /health/ready
   /actuator/health /actuator/health
   /actuator/health /actuator/health /actuator/health
   /actuator/health /actuator/health /actuator/health /actuator/health
-  /
 )
 
 check_tcp() {
@@ -69,7 +65,7 @@ check_http() {
     code="000"
   fi
   # 2xx = healthy; 401 = healthy (auth required, but service is up);
-  # 404 = healthy for nuxt-web (no /actuator/health endpoint)
+  # 404 = healthy for services without /actuator/health
   case "$code" in
     2*|401|404) return 0 ;;
     *) return 1 ;;

@@ -1,9 +1,0 @@
-<!DOCTYPE html>
-<html>
-<body>
-<script>
-  // Silent SSO check callback: parent receives auth events
-  parent.postMessage(location.href.split('?')[1] ? 'authenticated' : 'notAuthenticated', location.origin);
-</script>
-</body>
-</html>

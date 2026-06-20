@@ -46,8 +46,7 @@ if (-not $env:IMAGE_TAG) { $env:IMAGE_TAG = "latest" }
 $Services = @(
     "eureka", "gateway",
     "auth-service", "property-service", "restaurant-service", "inventory-service",
-    "finance-service", "payment-service", "reporting-service",
-    "nuxt-web"
+    "finance-service", "payment-service", "reporting-service"
 )
 
 # ─── Output helpers ───────────────────────────────────────────────────────────
@@ -238,7 +237,7 @@ function Prod-Push {
         $dockerfile = switch ($svc) {
             "eureka"   { "infrastructure/eureka/Dockerfile" }
             "gateway"  { "infrastructure/gateway/Dockerfile" }
-            "nuxt-web" { "frontend/report-system-web/Dockerfile" }
+
             default    { "services/$svc/Dockerfile" }
         }
         $img = "$pushReg/${svc}:$($env:IMAGE_TAG)"

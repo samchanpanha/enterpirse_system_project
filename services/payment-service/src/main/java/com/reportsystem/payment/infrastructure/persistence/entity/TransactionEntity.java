@@ -25,7 +25,7 @@ public class TransactionEntity {
     @Column(name = "customer_phone") private String customerPhone;
     @Column(name = "source_type") private String sourceType;
     @Column(name = "source_id") private UUID sourceId;
-    @Column(columnDefinition = "jsonb default '{}'") private String metadata;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb default '{}'") private String metadata;
     @Column(name = "paid_at") private Instant paidAt;
     @Column(name = "branch_id", nullable = false) private UUID branchId;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;

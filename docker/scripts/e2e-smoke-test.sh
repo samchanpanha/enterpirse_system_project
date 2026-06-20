@@ -236,7 +236,7 @@ fi
 # ─── 9. Inter-Branch Clearing account ──────────────────────────────────────
 section "9. Inter-Branch Clearing account exists"
 
-IBC_CODE=$(docker exec $PSQL_CONTAINER psql -U report_user -d finance_db -t -A -c "SELECT code FROM chart_of_accounts WHERE code = '1999-IBC';" 2>/dev/null)
+IBC_CODE=$(docker exec $PSQL_CONTAINER psql -U report_user -d finance_db -t -A -c "SELECT code FROM chart_of_accounts WHERE code = '1999-IBC' LIMIT 1;" 2>/dev/null)
 if [ "$IBC_CODE" = "1999-IBC" ]; then
   pass "Inter-Branch Clearing account (1999-IBC) created"
 else

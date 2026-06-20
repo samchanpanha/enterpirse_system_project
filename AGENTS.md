@@ -2,7 +2,7 @@
 
 ## Architecture
 
-7 Spring Boot 3.2.5 microservices + Eureka + Gateway + Kafka + PostgreSQL-per-service. Nuxt.js 3 frontend. All services use **hexagonal (ports & adapters)** architecture.
+7 Spring Boot 3.2.5 microservices + Eureka + Gateway + Kafka + PostgreSQL-per-service. **Angular 19** frontend (migrated from Nuxt.js 3). All services use **hexagonal (ports & adapters)** architecture.
 
 ### Service Port Map
 
@@ -35,7 +35,7 @@
 - `branch_id UUID NOT NULL` on every domain table across all 7 services
 - `BranchContextFilter` validates `X-Branch-Id` against user's allowed branches (60s cache, email+tenant lookup)
 - No branch assignment → tenant-admin mode (full access)
-- Frontend: `branchStore.$apiWithBranch()` auto-injects `?branchId=X` on every call
+- Frontend: branch service appends `?branchId=` on every API call
 
 ## Commands
 
@@ -46,11 +46,9 @@ mvn test -q                                # Run all tests (48 total: auth 27 + 
 mvn test -pl services/property-service -q  # Single service tests
 mvn package -DskipTests                    # Build JARs
 
-# Frontend (from frontend/report-system-web/)
-npm run typecheck                          # nuxt typecheck (0 errors expected)
-npm run lint                               # eslint (0 errors, debug console.warn OK)
-npm run build                              # Nuxt build -> .output/ (~4 MB)
-npm run dev                                # Dev server on :3000, proxies /api -> :8080
+# Frontend (from frontend/report-system-angular/)
+npm run build                              # Angular production build
+npm run start                              # Dev server on :4200
 
 # Docker (from project root, NOT docker/)
 docker compose -f docker/docker-compose.yml up -d       # Must use --project-directory .
@@ -61,13 +59,10 @@ docker/scripts/e2e-smoke-test.sh                        # 22 integration checks
 ## Known Gotchas
 
 ### Frontend
-- **`$apiWithBranch()` paths MUST NOT include `/api` prefix** — the `branch.ts` helper prepends it automatically. Wrong: `$apiWithBranch('/api/payment/...')`. Correct: `$apiWithBranch('/payment/...')`.
-- **`fetchBranches()` needs `Authorization` header** (it uses plain `$fetch`, not `$apiWithBranch`)
-- **SSO bridge URLs need `/api` prefix**: `${apiBaseUrl}/api/auth/sso-login`, NOT `${apiBaseUrl}/auth/sso-login`
-- **`nuxt.config.ts`** has `srcDir: 'app/'`, so imports use `~/stores/X`, `~/shared/types/X`, `~/components/admin/X` (NOT `~/app/...`)
-- **`tailwindcss.configPath`** is `'./tailwind.config.ts'` (relative to project root, NOT `'../'`)
-- **Auto-imports**: Nuxt auto-imports composables from `app/composables/` and components from `app/components/` (`pathPrefix: false` → flat names like `<AdminTable />`)
-- **Dark mode**: CSS class `dark` on `<html>`, toggled via `useLayoutState().toggleDarkMode()`
+- **API URLs must NOT include `/api` prefix** — the branch service prepends it automatically.
+- **`X-Branch-Id`** appended as query param `?branchId=` on every API call via HTTP interceptor.
+- **SSO bridge**: `POST /api/auth/sso-login` with `Authorization: Bearer {keycloak_token}`
+- **Dark mode**: PrimeNG dark theme toggle + Tailwind `dark` class on `<html>`
 
 ### Backend
 - **JPA entities with `jsonb` columns** need `@JdbcTypeCode(SqlTypes.JSON)` on the `String` field (13 entities across auth, payment, property, restaurant, reporting)
@@ -95,17 +90,51 @@ docker/scripts/e2e-smoke-test.sh                        # 22 integration checks
 | `infrastructure/gateway/.../RouteConfig.java` | All 16 gateway routes with stripPrefix rules |
 | `infrastructure/gateway/.../filter/OidcTokenValidator.java` | OIDC JWT validation + legacy fallback |
 | `infrastructure/gateway/.../filter/BranchContextFilter.java` | Branch access validation |
-| `docker/docker-compose.yml` | 18 services (dev) |
-| `docker/docker-compose.prod.yml` | 15 services (prod, with health checks) |
+| `docker/docker-compose.yml` | 16 services (dev) |
+| `docker/docker-compose.prod.yml` | 14 services (prod, nuxt-web removed) |
 | `docker/scripts/e2e-smoke-test.sh` | 22-check integration smoke test |
 | `docker/scripts/seed-sample-data.sh` | Demo data for all 7 services |
-| `frontend/report-system-web/nuxt.config.ts` | Nuxt config with proxy, runtimeConfig, tailwind |
-| `frontend/report-system-web/app/stores/branch.ts` | Branch store with `$apiWithBranch()` helper |
+| `frontend/report-system-angular/.../src/environments/` | Angular env config (dev + prod) |
+| `frontend/report-system-angular/.../app/core/` | Core services, interceptors, models |
+| `frontend/report-system-angular/Dockerfile` | Angular nginx Docker build |
+
+## Angular Frontend (Phases 1-7 Complete)
+
+The Angular 19 frontend at `frontend/report-system-angular/` has been scaffolded with:
+
+| Stack | Version |
+|-------|---------|
+| Angular | 19.2.x (standalone, routing) |
+| PrimeNG | 19.1.4 (Aura theme) |
+| Tailwind CSS | 4.3.1 (@tailwindcss/postcss) |
+| Keycloak Angular | 22.x (keycloak-js 26.x) |
+| PrimeIcons | 7.x |
+
+**Project structure** (`src/app/`):
+- `core/` — interceptors (auth, branch), services (branch, keycloak-init), models (User)
+- `shared/` — layout (MainLayout, Sidebar, Topbar)
+- `features/` — 7 lazy-loaded modules, all fully built:
+
+  | Module | Components |
+  |--------|-----------|
+  | Auth | LoginComponent, authGuard |
+  | Dashboard | DashboardComponent (4 stat cards) |
+  | Property | PropertyList, PropertyForm, PropertyDetail, UnitList, UnitFormDialog, LeaseList, LeaseFormDialog |
+  | Restaurant | OutletList, OutletDetail, MenuList, OrderList, CustomerList, ReservationList |
+  | Inventory | ProductList, ProductForm, SupplierList, PurchaseOrderList, StockTransferList |
+  | Finance | ChartOfAccountsList, AccountForm, JournalEntryList, InvoiceList, InvoiceDetail, InvoiceForm, TaxList, EmployeeList, PayrollList |
+  | Payment | PaymentList |
+  | Reporting | ReportList (dashboard summary cards + report table) |
+
+**Key config**: PrimeNG Aura theme with dark mode via `.dark` class, Tailwind for utility CSS, Keycloak SSO with `check-sso` init, HTTP interceptors for token + tenant/branch headers.
+
+**Docker**: `docker-compose.yml` now includes `report-web` service (nginx, port 4200). Build with `docker compose -f docker/docker-compose.yml up -d --build report-web`.
+
+Backend services also testable via `docker/scripts/e2e-smoke-test.sh` or direct API calls through gateway at `http://localhost:8080`.
 
 ## Default Credentials
 
 - Email: `admin@demo.com` / Password: `Demo123!`
 - Tenant: `demo-corp` (UUID `00000000-0000-0000-0000-000000000001`)
 - HQ Branch UUID: `00000000-0000-0000-0000-000000000010`
-- Login: `http://localhost:3000/login`
 - API: `POST http://localhost:8080/api/auth/login`

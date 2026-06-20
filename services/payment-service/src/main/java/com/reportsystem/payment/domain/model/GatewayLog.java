@@ -11,6 +11,7 @@ import lombok.*;
 public class GatewayLog {
     private final UUID id;
     private UUID transactionId;
+    private UUID branchId;
     private String gateway;
     private String requestBody;
     private String responseBody;

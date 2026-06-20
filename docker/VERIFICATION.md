@@ -50,7 +50,7 @@ docker compose -f docker/docker-compose.yml ps
 # - keycloak (health/ready endpoint)
 # - eureka (actuator/health)
 # - All 7 microservices (actuator/health)
-# - nuxt-web (process check)
+
 ```
 
 ## 4. Performance Optimization Verification

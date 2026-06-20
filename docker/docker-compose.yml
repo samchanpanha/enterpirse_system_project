@@ -340,27 +340,19 @@ services:
       timeout: 5s
       retries: 10
 
-  nuxt-web:
+  report-web:
     build:
-      context: ./frontend/report-system-web
+      context: ./frontend/report-system-angular
       dockerfile: Dockerfile
     container_name: report-web
     ports:
-      - "3000:3000"
+      - "4200:80"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     environment:
-      - NUXT_PUBLIC_API_BASE_URL=http://gateway:8080
-      - NUXT_API_BASE_URL=http://gateway:8080
-      - NUXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
-      - NUXT_PUBLIC_KEYCLOAK_REALM=demo-corp
-      - NUXT_PUBLIC_KEYCLOAK_CLIENT_ID=report-system-web
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'node server/index.mjs' > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      - API_URL=http://gateway:8080/api
+      - KEYCLOAK_URL=http://keycloak:8080
 
 volumes:
   postgres-data:
