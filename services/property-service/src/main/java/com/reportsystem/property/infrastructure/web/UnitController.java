@@ -39,7 +39,8 @@ public class UnitController {
                 (String) body.get("label"),
                 (Integer) body.get("floor"),
                 (Integer) body.get("bedrooms"),
-                (Integer) body.get("bathrooms"));
+                (Integer) body.get("bathrooms"),
+                body.get("rentAmount") != null ? new BigDecimal(body.get("rentAmount").toString()) : null);
         return ResponseEntity.status(HttpStatus.CREATED).body(unit);
     }
 

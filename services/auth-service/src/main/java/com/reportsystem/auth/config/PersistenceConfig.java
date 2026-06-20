@@ -3,6 +3,7 @@ package com.reportsystem.auth.config;
 import com.reportsystem.auth.infrastructure.persistence.mapper.TenantMapper;
 import com.reportsystem.auth.infrastructure.persistence.mapper.UserMapper;
 import com.reportsystem.auth.infrastructure.persistence.mapper.RoleMapper;
+import com.reportsystem.auth.infrastructure.persistence.mapper.PermissionMapper;
 import com.reportsystem.auth.infrastructure.persistence.mapper.BranchMapper;
 import com.reportsystem.auth.infrastructure.persistence.mapper.UserBranchMapper;
 import com.reportsystem.auth.infrastructure.persistence.mapper.FeatureMapper;
@@ -10,6 +11,7 @@ import com.reportsystem.auth.infrastructure.persistence.mapper.ClientFeatureMapp
 import com.reportsystem.auth.domain.port.outbound.TenantRepository;
 import com.reportsystem.auth.domain.port.outbound.UserRepository;
 import com.reportsystem.auth.domain.port.outbound.RoleRepository;
+import com.reportsystem.auth.domain.port.outbound.PermissionRepository;
 import com.reportsystem.auth.domain.port.outbound.BranchRepository;
 import com.reportsystem.auth.domain.port.outbound.UserBranchRepository;
 import com.reportsystem.auth.domain.port.outbound.FeatureRepository;
@@ -17,6 +19,7 @@ import com.reportsystem.auth.domain.port.outbound.ClientFeatureRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaTenantRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaUserRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaRoleRepository;
+import com.reportsystem.auth.infrastructure.persistence.repository.JpaPermissionRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaBranchRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaUserBranchRepository;
 import com.reportsystem.auth.infrastructure.persistence.repository.JpaFeatureRepository;
@@ -33,6 +36,11 @@ public class PersistenceConfig {
             @Override
             public com.reportsystem.auth.domain.model.Tenant save(com.reportsystem.auth.domain.model.Tenant tenant) {
                 return tenantMapper.toDomain(jpaTenantRepository.save(tenantMapper.toEntity(tenant)));
+            }
+
+            @Override
+            public java.util.List<com.reportsystem.auth.domain.model.Tenant> findAll() {
+                return jpaTenantRepository.findAll().stream().map(tenantMapper::toDomain).toList();
             }
 
             @Override
@@ -108,6 +116,44 @@ public class PersistenceConfig {
             @Override
             public java.util.Optional<com.reportsystem.auth.domain.model.Role> findByNameAndTenantId(String name, java.util.UUID tenantId) {
                 return jpaRoleRepository.findByNameAndTenantId(name, tenantId).map(roleMapper::toDomain);
+            }
+        };
+    }
+
+    @Bean
+    public PermissionRepository permissionRepository(JpaPermissionRepository jpaPermissionRepository, PermissionMapper permissionMapper) {
+        return new PermissionRepository() {
+            @Override
+            public com.reportsystem.auth.domain.model.Permission save(com.reportsystem.auth.domain.model.Permission permission) {
+                return permissionMapper.toDomain(jpaPermissionRepository.save(permissionMapper.toEntity(permission)));
+            }
+
+            @Override
+            public java.util.Optional<com.reportsystem.auth.domain.model.Permission> findById(java.util.UUID id) {
+                return jpaPermissionRepository.findById(id).map(permissionMapper::toDomain);
+            }
+
+            @Override
+            public java.util.Optional<com.reportsystem.auth.domain.model.Permission> findByCode(String code) {
+                return jpaPermissionRepository.findByCode(code).map(permissionMapper::toDomain);
+            }
+
+            @Override
+            public java.util.List<com.reportsystem.auth.domain.model.Permission> findAll() {
+                return jpaPermissionRepository.findAllByOrderByModuleAscCodeAsc().stream().map(permissionMapper::toDomain).toList();
+            }
+
+            @Override
+            public java.util.List<com.reportsystem.auth.domain.model.Permission> findByModule(String module) {
+                return jpaPermissionRepository.findByModule(module).stream().map(permissionMapper::toDomain).toList();
+            }
+
+            @Override
+            public java.util.List<com.reportsystem.auth.domain.model.Permission> findByIds(java.util.List<java.util.UUID> ids) {
+                if (ids == null || ids.isEmpty()) {
+                    return java.util.List.of();
+                }
+                return jpaPermissionRepository.findAllById(ids).stream().map(permissionMapper::toDomain).toList();
             }
         };
     }

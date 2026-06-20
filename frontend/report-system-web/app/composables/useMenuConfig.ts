@@ -96,8 +96,11 @@ export const useMenuConfig = () => {
       feature: 'platform.branches',
       children: [
         { path: '/app/admin/branches', title: 'Branches' },
-        { path: '/app/admin/clients', title: 'Clients', feature: 'platform.users' },
-        { path: '/app/admin/features', title: 'Features', feature: 'platform.users' }
+        { path: '/app/admin/users', title: 'Users', permission: 'users.read' },
+        { path: '/app/admin/roles', title: 'Roles', permission: 'roles.read' },
+        { path: '/app/admin/permissions', title: 'Permissions', permission: 'permissions.read' },
+        { path: '/app/admin/clients', title: 'Clients', permission: 'clients.read' },
+        { path: '/app/admin/features', title: 'Features', permission: 'features.read' }
       ]
     }
   ]

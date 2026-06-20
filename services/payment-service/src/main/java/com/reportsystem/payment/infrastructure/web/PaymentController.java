@@ -56,4 +56,9 @@ public class PaymentController {
     @PostMapping("/reconciliation/{id}/complete") public ResponseEntity<ReconciliationRecord> completeRec(@PathVariable UUID id) {
         return ResponseEntity.ok(recService.completeReconciliation(id));
     }
+
+    @GetMapping("/reconciliation/by-tenant/{tenantId}") public ResponseEntity<List<ReconciliationRecord>> getReconciliations(@PathVariable UUID tenantId, @RequestHeader(value = "X-Branch-Id", required = false) String branchId) {
+        if (branchId != null && !branchId.isBlank()) { return ResponseEntity.ok(recService.findByTenantAndBranch(tenantId, UUID.fromString(branchId))); }
+        return ResponseEntity.ok(recService.findByTenant(tenantId));
+    }
 }

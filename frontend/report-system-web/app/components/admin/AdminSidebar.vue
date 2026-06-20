@@ -109,7 +109,7 @@
       v-if="!sidebarCollapsed"
       class="px-4 py-3 border-t border-sidebar-border text-xs text-sidebar-text/60 flex-shrink-0"
     >
-      <div>v0.1.0 · Sprint 13</div>
+      <div>v0.1.0 · Sprint 14</div>
     </div>
   </aside>
 </template>
@@ -121,15 +121,18 @@ const { sidebarCollapsed } = useLayoutState()
 const { menu } = useMenuConfig()
 const route = useRoute()
 const { has: hasFeature } = useFeature()
+const { can } = usePermission()
 
 const openSubmenus = useState<Set<string>>('layout.sidebar.open-submenus', () => new Set())
 
 const visibleMenu = computed<MenuItem[]>(() => {
   return menu
-    .filter(m => !m.feature || hasFeature(m.feature))
+    .filter(m => (!m.feature || hasFeature(m.feature)) && (!m.permission || can(m.permission)))
     .map(m => ({
       ...m,
-      children: m.children?.filter(c => !c.feature || hasFeature(c.feature))
+      children: m.children?.filter(c =>
+        (!c.feature || hasFeature(c.feature)) && (!c.permission || can(c.permission))
+      )
     }))
 })
 

@@ -11,10 +11,11 @@ import lombok.*;
 @AllArgsConstructor
 public class ReportExecution {
     private final UUID id; private UUID reportId;
-    private final UUID tenantId; private String parameters;
-    private String status; private String outputUrl;
-    private Integer rowCount; private Integer durationMs;
-    private String errorMessage; private UUID requestedBy;
+    private final UUID tenantId; private UUID branchId;
+    private String parameters; private String status;
+    private String outputUrl; private Integer rowCount;
+    private Integer durationMs; private String errorMessage;
+    private String resultData; private UUID requestedBy;
     private Instant startedAt; private Instant completedAt;
     private final Instant createdAt;
 }

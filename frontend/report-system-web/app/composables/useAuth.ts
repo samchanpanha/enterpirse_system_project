@@ -51,7 +51,7 @@ export const useAuth = () => {
   const bridgeFromKeycloak = async () => {
     if (!$keycloak?.token) { return }
     const config = useRuntimeConfig()
-    const data: any = await $fetch(`${config.public.apiBaseUrl}/auth/sso-login`, {
+    const data: any = await $fetch(`${config.public.apiBaseUrl}/api/auth/sso-login`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${$keycloak.token}` }
     })
@@ -98,11 +98,21 @@ export const useAuth = () => {
     }
   }
 
-  const init = () => {
+  const init = async () => {
     const savedToken = localStorage.getItem('auth.token')
     const savedUser = localStorage.getItem('auth.user')
     if (savedToken) { token.value = savedToken }
     if (savedUser) { user.value = JSON.parse(savedUser) }
+    if (savedToken) {
+      try {
+        const { usePermissionStore } = await import('~/stores/permission')
+        const { useFeatureStore } = await import('~/stores/feature')
+        await Promise.all([
+          usePermissionStore().fetchPermissions(),
+          useFeatureStore().fetchFeatures()
+        ])
+      } catch (e) { /* ignore */ }
+    }
   }
 
   if (import.meta.client) {

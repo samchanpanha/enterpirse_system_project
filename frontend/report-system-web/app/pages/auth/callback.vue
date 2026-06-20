@@ -11,13 +11,14 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: false })
-const { handleKeycloakCallback } = useAuth()
+const { handleKeycloakCallback, afterLogin } = useAuth()
 const router = useRouter()
 const route = useRoute()
 
 onMounted(async () => {
   try {
     await handleKeycloakCallback()
+    await afterLogin()
     await router.push((route.query.redirect as string) || '/app/dashboard')
   } catch (e: any) {
     console.error('Keycloak callback failed', e)

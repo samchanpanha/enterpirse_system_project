@@ -36,10 +36,20 @@
     <div v-else-if="store.currentProperty" class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white rounded shadow-card p-6">
-          <h2 class="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <Icon icon="ant-design:home-outlined" class="text-primary" />
-            Units ({{ store.units.length }})
-          </h2>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-text-primary flex items-center gap-2">
+              <Icon icon="ant-design:home-outlined" class="text-primary" />
+              Units ({{ store.units.length }})
+            </h2>
+            <button
+              v-if="can('property.write')"
+              class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary text-white rounded hover:bg-primary-hover transition-colors"
+              @click="openUnitCreate"
+            >
+              <Icon icon="ant-design:plus-outlined" />
+              Add Unit
+            </button>
+          </div>
           <AdminEmpty
             v-if="store.units.length === 0"
             icon="ant-design:inbox-outlined"
@@ -170,6 +180,13 @@
           <span class="text-text-secondary text-sm">Bedrooms</span>
           <span class="text-text-primary font-mono">{{ unitDrawer.editing.value.bedrooms }}</span>
         </div>
+        <button
+          v-if="can('property.write') && unitDrawer.editing.value.status !== 'occupied'"
+          class="w-full mt-2 px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover"
+          @click="openLeaseCreate(unitDrawer.editing.value)"
+        >
+          Create Lease
+        </button>
       </div>
       <template #footer>
         <button
@@ -180,24 +197,190 @@
         </button>
       </template>
     </AdminDrawer>
+
+    <AdminDrawer
+      v-model="unitCreateDrawer.open.value"
+      title="Add Unit"
+      width="md"
+    >
+      <AdminForm
+        v-model="unitCreateForm"
+        :groups="unitCreateFormGroups"
+      />
+      <template #footer>
+        <button
+          class="px-3 py-1.5 text-sm border border-border rounded text-text-primary hover:bg-gray-50"
+          @click="unitCreateDrawer.close()"
+        >
+          Cancel
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover"
+          :disabled="!canCreateUnit"
+          @click="submitUnitCreate"
+        >
+          Add Unit
+        </button>
+      </template>
+    </AdminDrawer>
+
+    <AdminDrawer
+      v-model="leaseCreateDrawer.open.value"
+      title="Create Lease"
+      width="md"
+    >
+      <AdminForm
+        v-model="leaseCreateForm"
+        :groups="leaseCreateFormGroups"
+      />
+      <template #footer>
+        <button
+          class="px-3 py-1.5 text-sm border border-border rounded text-text-primary hover:bg-gray-50"
+          @click="leaseCreateDrawer.close()"
+        >
+          Cancel
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover"
+          :disabled="!canCreateLease"
+          @click="submitLeaseCreate"
+        >
+          Create Lease
+        </button>
+      </template>
+    </AdminDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Unit } from '~/shared/types/property'
+import type { FormGroup } from '~/shared/types/form'
 
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const id = computed(() => route.params.id as string)
 const store = usePropertyStore()
-const selectedUnit = ref<Unit | null>(null)
+const { can } = usePermission()
+const { user } = useAuth()
+const { text, number, date, group } = useFormSchema()
 
+const selectedUnit = ref<Unit | null>(null)
 const unitDrawer = useDrawer<Unit>()
+const unitCreateDrawer = useDrawer()
+const leaseCreateDrawer = useDrawer<Unit>()
+
+const unitCreateForm = ref({
+  label: '',
+  floor: 1,
+  bedrooms: 1,
+  bathrooms: 1,
+  rentAmount: 0
+})
+
+const leaseCreateForm = ref({
+  tenantName: '',
+  tenantPhone: '',
+  startDate: '',
+  endDate: '',
+  rentAmount: 0,
+  depositAmount: 0
+})
+
+const unitCreateFormGroups = computed<FormGroup[]>(() => [
+  group('', [
+    text('label', 'Unit Label', { required: true, placeholder: 'A-101' }),
+    number('floor', 'Floor', { required: true }),
+    number('bedrooms', 'Bedrooms', { required: true }),
+    number('bathrooms', 'Bathrooms', { required: true }),
+    number('rentAmount', 'Monthly Rent', { required: true, min: 0 })
+  ])
+])
+
+const leaseCreateFormGroups = computed<FormGroup[]>(() => [
+  group('', [
+    text('tenantName', 'Tenant Name', { required: true }),
+    text('tenantPhone', 'Tenant Phone', { placeholder: '+855...' }),
+    date('startDate', 'Start Date', { required: true }),
+    date('endDate', 'End Date', { required: true }),
+    number('rentAmount', 'Monthly Rent', { required: true, min: 0 }),
+    number('depositAmount', 'Deposit', { min: 0 })
+  ])
+])
+
+const canCreateUnit = computed(() =>
+  unitCreateForm.value.label &&
+  unitCreateForm.value.floor >= 0 &&
+  unitCreateForm.value.bedrooms >= 0 &&
+  unitCreateForm.value.bathrooms >= 0 &&
+  unitCreateForm.value.rentAmount >= 0
+)
+
+const canCreateLease = computed(() =>
+  leaseCreateForm.value.tenantName &&
+  leaseCreateForm.value.startDate &&
+  leaseCreateForm.value.endDate &&
+  leaseCreateForm.value.rentAmount > 0
+)
 
 watch(selectedUnit, (u) => {
   if (u) { unitDrawer.openView(u) }
 })
+
+function openUnitCreate () {
+  unitCreateForm.value = {
+    label: '',
+    floor: 1,
+    bedrooms: 1,
+    bathrooms: 1,
+    rentAmount: 0
+  }
+  unitCreateDrawer.openFor(null)
+}
+
+async function submitUnitCreate () {
+  if (!user.value?.tenantId) { return }
+  try {
+    await store.createUnit({
+      tenantId: user.value.tenantId,
+      propertyId: id.value,
+      ...unitCreateForm.value
+    })
+    unitCreateDrawer.close()
+    await store.fetchUnits(id.value)
+  } catch (e: any) {
+    alert(e?.data?.message || 'Failed to add unit')
+  }
+}
+
+function openLeaseCreate (unit: Unit) {
+  leaseCreateForm.value = {
+    tenantName: '',
+    tenantPhone: '',
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: '',
+    rentAmount: unit.rentAmount || 0,
+    depositAmount: 0
+  }
+  leaseCreateDrawer.openFor(unit)
+}
+
+async function submitLeaseCreate () {
+  const unit = leaseCreateDrawer.editing.value
+  if (!unit || !user.value?.tenantId) { return }
+  try {
+    await store.createLease({
+      tenantId: user.value.tenantId,
+      unitId: unit.id,
+      ...leaseCreateForm.value
+    })
+    leaseCreateDrawer.close()
+    unitDrawer.close()
+    await store.fetchUnits(id.value)
+  } catch (e: any) {
+    alert(e?.data?.message || 'Failed to create lease')
+  }
+}
 
 onMounted(async () => {
   await store.fetchProperty(id.value)

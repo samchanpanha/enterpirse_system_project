@@ -18,7 +18,7 @@ public class ReportController {
         UUID bid = branchId != null && !branchId.isBlank() ? UUID.fromString(branchId) : null;
         return ResponseEntity.status(HttpStatus.CREATED).body(reportService.createDefinition(
                 UUID.fromString((String)b.get("tenantId")), bid, (String)b.get("name"),
-                (String)b.get("type"), (String)b.get("config")));
+                (String)b.get("type"), (String)b.get("config"), (String)b.get("layout")));
     }
     @GetMapping("/definitions/{id}") public ResponseEntity<ReportDefinition> getDef(@PathVariable UUID id) {
         return reportService.getDefinitionById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
@@ -30,10 +30,24 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getDefinitionsByTenant(tenantId));
     }
     @PostMapping("/definitions/{id}/execute")
-    public ResponseEntity<ReportExecution> execute(@PathVariable UUID id, @RequestBody Map<String, Object> b) {
+    public ResponseEntity<ReportExecution> execute(@PathVariable UUID id, @RequestHeader(value = "X-Branch-Id", required = false) String branchId, @RequestBody Map<String, Object> b) {
+        UUID bid = branchId != null && !branchId.isBlank() ? UUID.fromString(branchId) : null;
         return ResponseEntity.ok(reportService.executeReport(id,
-                UUID.fromString((String)b.get("tenantId")),
+                UUID.fromString((String)b.get("tenantId")), bid,
                 (String)b.get("parameters"),
                 b.get("requestedBy") != null ? UUID.fromString((String)b.get("requestedBy")) : null));
+    }
+    @GetMapping("/executions/{id}")
+    public ResponseEntity<ReportExecution> getExecution(@PathVariable UUID id, @RequestHeader(value = "X-Branch-Id", required = false) String branchId) {
+        return reportService.getExecutionById(id)
+                .filter(e -> branchId == null || branchId.isBlank() || e.getBranchId() == null || e.getBranchId().toString().equals(branchId))
+                .map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+    @GetMapping("/executions/by-report/{reportId}")
+    public ResponseEntity<List<ReportExecution>> getExecutionsByReport(@PathVariable UUID reportId, @RequestHeader(value = "X-Branch-Id", required = false) String branchId) {
+        if (branchId != null && !branchId.isBlank()) {
+            return ResponseEntity.ok(reportService.getExecutionsByReportIdAndBranch(reportId, UUID.fromString(branchId)));
+        }
+        return ResponseEntity.ok(reportService.getExecutionsByReportId(reportId));
     }
 }

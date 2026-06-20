@@ -46,6 +46,15 @@ export const usePropertyStore = defineStore('property', () => {
     }
   }
 
+  const createUnit = async (unit: Partial<Unit>) => {
+    const created = await branchStore.$apiWithBranch<Unit>('/property/units', {
+      method: 'POST',
+      body: unit
+    })
+    units.value.push(created)
+    return created
+  }
+
   const fetchLeases = async (unitId: string) => {
     loading.value = true
     try {
@@ -53,6 +62,15 @@ export const usePropertyStore = defineStore('property', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  const createLease = async (lease: Partial<Lease>) => {
+    const created = await branchStore.$apiWithBranch<Lease>('/property/leases', {
+      method: 'POST',
+      body: lease
+    })
+    leases.value.push(created)
+    return created
   }
 
   return {
@@ -66,6 +84,8 @@ export const usePropertyStore = defineStore('property', () => {
     fetchProperty,
     createProperty,
     fetchUnits,
-    fetchLeases
+    createUnit,
+    fetchLeases,
+    createLease
   }
 })

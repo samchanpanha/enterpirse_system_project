@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface InvoiceService {
     Invoice createInvoice(UUID tenantId, UUID branchId, String invoiceType, String customerName, LocalDate issueDate, LocalDate dueDate, BigDecimal subtotal, BigDecimal taxAmount, BigDecimal total);
+    Invoice createInvoiceWithItems(UUID tenantId, UUID branchId, String invoiceType, String customerName, LocalDate issueDate, LocalDate dueDate, List<InvoiceItem> items);
     Optional<Invoice> getInvoiceById(UUID id);
     List<Invoice> getInvoicesByTenant(UUID tenantId);
     List<Invoice> getInvoicesByTenantAndBranch(UUID tenantId, UUID branchId);

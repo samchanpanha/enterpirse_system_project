@@ -27,6 +27,22 @@ public class RouteConfig {
                 .path("/api/features/**")
                 .filters(f -> f.stripPrefix(1))
                 .uri("lb://auth-service"))
+            .route("users-service", r -> r
+                .path("/api/users/**")
+                .filters(f -> f.stripPrefix(1))
+                .uri("lb://auth-service"))
+            .route("tenants-service", r -> r
+                .path("/api/tenants/**")
+                .filters(f -> f.stripPrefix(1))
+                .uri("lb://auth-service"))
+            .route("roles-service", r -> r
+                .path("/api/roles/**")
+                .filters(f -> f.stripPrefix(1))
+                .uri("lb://auth-service"))
+            .route("permissions-service", r -> r
+                .path("/api/permissions/**")
+                .filters(f -> f.stripPrefix(1))
+                .uri("lb://auth-service"))
             .route("admin-service", r -> r
                 .path("/api/admin/**")
                 .filters(f -> f.stripPrefix(1))
@@ -41,10 +57,6 @@ public class RouteConfig {
                 .uri("lb://restaurant-service"))
             .route("inventory-service", r -> r
                 .path("/api/inventory/**")
-                .filters(f -> f.stripPrefix(2))
-                .uri("lb://inventory-service"))
-            .route("inventory-transfers-service", r -> r
-                .path("/api/inventory/transfers/**")
                 .filters(f -> f.stripPrefix(2))
                 .uri("lb://inventory-service"))
             .route("finance-service", r -> r

@@ -21,6 +21,7 @@ public class ReportExecutionEntity {
     @Column(name = "row_count") private Integer rowCount;
     @Column(name = "duration_ms") private Integer durationMs;
     @Column(name = "error_message") private String errorMessage;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(name = "result_data", columnDefinition = "jsonb") private String resultData;
     @Column(name = "requested_by") private UUID requestedBy;
     @Column(name = "started_at") private Instant startedAt;
     @Column(name = "completed_at") private Instant completedAt;

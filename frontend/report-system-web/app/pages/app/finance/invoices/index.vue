@@ -3,7 +3,7 @@
     <AdminPageHeader title="Invoices" :subtitle="`${list.items.value.length} invoices`">
       <template #actions>
         <button
-          v-if="can('finance.invoice.create')"
+          v-if="can('finance.write')"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm rounded hover:bg-primary-hover transition-colors"
           @click="openCreate()"
         >
@@ -27,20 +27,14 @@
           <option value="">
             All statuses
           </option>
-          <option value="DRAFT">
-            Draft
+          <option value="pending">
+            Pending
           </option>
-          <option value="OPEN">
-            Open
-          </option>
-          <option value="PARTIAL">
-            Partial
-          </option>
-          <option value="PAID">
+          <option value="paid">
             Paid
           </option>
-          <option value="OVERDUE">
-            Overdue
+          <option value="partial">
+            Partial
           </option>
         </select>
       </template>
@@ -81,30 +75,172 @@
       </template>
       <template #actions="{ row }">
         <button
-          v-if="can('finance.invoice.pay') && row.status !== 'PAID'"
+          v-if="can('finance.write') && row.status !== 'paid'"
           class="text-sm text-success hover:opacity-80 px-2 py-0.5"
+          @click="openPay(row)"
         >
           Mark paid
         </button>
       </template>
     </AdminTable>
+
+    <AdminDrawer
+      v-model="createDrawer.open.value"
+      title="New Invoice"
+      width="lg"
+    >
+      <AdminForm
+        v-model="createForm"
+        :groups="createFormGroups"
+      />
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-sm font-semibold text-text-primary">
+            Line Items
+          </h4>
+          <button
+            type="button"
+            class="text-xs text-primary hover:text-primary-hover"
+            @click="addItem"
+          >
+            + Add item
+          </button>
+        </div>
+        <div
+          v-for="(item, idx) in createForm.items"
+          :key="idx"
+          class="grid grid-cols-12 gap-2 mb-2 items-end"
+        >
+          <div class="col-span-5">
+            <input
+              v-model="item.description"
+              type="text"
+              placeholder="Description"
+              class="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-primary"
+            >
+          </div>
+          <div class="col-span-2">
+            <input
+              v-model.number="item.quantity"
+              type="number"
+              min="1"
+              placeholder="Qty"
+              class="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-primary"
+            >
+          </div>
+          <div class="col-span-3">
+            <input
+              v-model.number="item.unitPrice"
+              type="number"
+              step="0.01"
+              placeholder="Price"
+              class="w-full text-sm border border-border rounded px-2 py-1.5 focus:outline-none focus:border-primary"
+            >
+          </div>
+          <div class="col-span-2">
+            <button
+              type="button"
+              class="text-xs text-danger hover:opacity-80"
+              @click="removeItem(idx)"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+        <div class="flex justify-end text-sm font-medium text-text-primary mt-2">
+          Total: ${{ invoiceTotal.toFixed(2) }}
+        </div>
+      </div>
+      <template #footer>
+        <button
+          class="px-3 py-1.5 text-sm border border-border rounded text-text-primary hover:bg-gray-50"
+          @click="createDrawer.close()"
+        >
+          Cancel
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover"
+          :disabled="!canCreate"
+          @click="submitCreate"
+        >
+          Create
+        </button>
+      </template>
+    </AdminDrawer>
+
+    <AdminDrawer
+      v-model="payDrawer.open.value"
+      title="Record Payment"
+      width="md"
+    >
+      <AdminForm
+        v-model="payForm"
+        :groups="payFormGroups"
+      />
+      <template #footer>
+        <button
+          class="px-3 py-1.5 text-sm border border-border rounded text-text-primary hover:bg-gray-50"
+          @click="payDrawer.close()"
+        >
+          Cancel
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm bg-success text-white rounded hover:opacity-80"
+          :disabled="!payForm.amount || payForm.amount <= 0"
+          @click="submitPay"
+        >
+          Record Payment
+        </button>
+      </template>
+    </AdminDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Invoice } from '~/shared/types/finance'
+import type { Invoice, InvoiceItemInput } from '~/shared/types/finance'
 import type { ColumnDef } from '~/components/admin/AdminTable.vue'
+import type { FormGroup } from '~/shared/types/form'
 
 definePageMeta({ middleware: 'auth' })
 
 const store = useFinanceStore()
 const { can } = usePermission()
 const { user } = useAuth()
+const { text, number, date, select, group, opt } = useFormSchema()
 
 const list = useListPage<Invoice>({
   pageSize: 20,
   initialFilters: { status: '' }
 })
+const createDrawer = useDrawer()
+const payDrawer = useDrawer<Invoice>()
+
+const createForm = ref({
+  invoiceType: 'sales',
+  customerName: '',
+  issueDate: new Date().toISOString().slice(0, 10),
+  dueDate: '',
+  items: [] as InvoiceItemInput[]
+})
+const payForm = ref({ amount: 0 })
+
+const createFormGroups = computed<FormGroup[]>(() => [
+  group('', [
+    select('invoiceType', 'Type', [
+      opt('sales', 'Sales'),
+      opt('purchase', 'Purchase')
+    ], { required: true }),
+    text('customerName', 'Customer / Vendor', { required: true }),
+    date('issueDate', 'Issue Date', { required: true }),
+    date('dueDate', 'Due Date', { required: true })
+  ])
+])
+
+const payFormGroups = computed<FormGroup[]>(() => [
+  group('', [
+    number('amount', 'Amount', { required: true, min: 0.01 })
+  ])
+])
 
 const columns: ColumnDef[] = [
   { key: 'invoiceNumber', title: 'Invoice #', sortable: true, width: '140px' },
@@ -115,6 +251,22 @@ const columns: ColumnDef[] = [
   { key: 'balanceDue', title: 'Balance', align: 'right', width: '120px' },
   { key: 'status', title: 'Status', width: '120px' }
 ]
+
+const invoiceTotal = computed(() => {
+  return createForm.value.items.reduce((sum, item) => {
+    const qty = Number(item.quantity) || 0
+    const price = Number(item.unitPrice) || 0
+    return sum + (qty * price)
+  }, 0)
+})
+
+const canCreate = computed(() =>
+  createForm.value.customerName &&
+  createForm.value.issueDate &&
+  createForm.value.dueDate &&
+  createForm.value.items.length > 0 &&
+  createForm.value.items.every(i => i.description && i.quantity > 0 && i.unitPrice > 0)
+)
 
 const filteredItems = computed(() => {
   let items = list.items.value
@@ -131,28 +283,70 @@ const filteredItems = computed(() => {
 
 function statusClass (status: string): string {
   switch (status) {
-    case 'DRAFT': return 'bg-gray-100 text-text-secondary'
-    case 'OPEN': return 'bg-primary-light text-primary'
-    case 'PARTIAL': return 'bg-warning-light text-warning'
-    case 'PAID': return 'bg-success-light text-success'
-    case 'OVERDUE': return 'bg-danger-light text-danger'
+    case 'pending': return 'bg-warning-light text-warning'
+    case 'partial': return 'bg-primary-light text-primary'
+    case 'paid': return 'bg-success-light text-success'
     default: return 'bg-gray-100 text-text-secondary'
   }
 }
 
 function statusDot (status: string): string {
   switch (status) {
-    case 'DRAFT': return 'bg-text-disabled'
-    case 'OPEN': return 'bg-primary'
-    case 'PARTIAL': return 'bg-warning'
-    case 'PAID': return 'bg-success'
-    case 'OVERDUE': return 'bg-danger'
+    case 'pending': return 'bg-warning'
+    case 'partial': return 'bg-primary'
+    case 'paid': return 'bg-success'
     default: return 'bg-text-disabled'
   }
 }
 
 function openCreate () {
-  // TODO: open drawer with form
+  createForm.value = {
+    invoiceType: 'sales',
+    customerName: '',
+    issueDate: new Date().toISOString().slice(0, 10),
+    dueDate: '',
+    items: [{ description: '', quantity: 1, unitPrice: 0 }]
+  }
+  createDrawer.openFor(null)
+}
+
+function addItem () {
+  createForm.value.items.push({ description: '', quantity: 1, unitPrice: 0 })
+}
+
+function removeItem (idx: number) {
+  createForm.value.items.splice(idx, 1)
+}
+
+async function submitCreate () {
+  if (!user.value?.tenantId) { return }
+  try {
+    await store.createInvoice({
+      tenantId: user.value.tenantId,
+      ...createForm.value
+    })
+    createDrawer.close()
+    await load()
+  } catch (e: any) {
+    alert(e?.data?.message || 'Failed to create invoice')
+  }
+}
+
+function openPay (row: Invoice) {
+  payDrawer.openFor(row)
+  payForm.value = { amount: Number(row.balanceDue) || 0 }
+}
+
+async function submitPay () {
+  const row = payDrawer.editing.value
+  if (!row) { return }
+  try {
+    await store.payInvoice(row.id, payForm.value.amount)
+    payDrawer.close()
+    await load()
+  } catch (e: any) {
+    alert(e?.data?.message || 'Failed to record payment')
+  }
 }
 
 async function load () {

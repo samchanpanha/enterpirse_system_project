@@ -7,4 +7,4 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface JpaReportExecutionRepository extends JpaRepository<ReportExecutionEntity, UUID> { List<ReportExecutionEntity> findByTenantId(UUID t); }
+public interface JpaReportExecutionRepository extends JpaRepository<ReportExecutionEntity, UUID> { List<ReportExecutionEntity> findByTenantId(UUID t); List<ReportExecutionEntity> findByReportId(UUID reportId); List<ReportExecutionEntity> findByReportIdAndBranchId(UUID reportId, UUID branchId); }

@@ -4,9 +4,12 @@ import com.reportsystem.auth.domain.model.Tenant;
 import com.reportsystem.auth.domain.port.inbound.TenantUseCase;
 import com.reportsystem.auth.domain.port.outbound.TenantRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
+@Service
 public class TenantService implements TenantUseCase {
 
     private final TenantRepository tenantRepository;
@@ -34,6 +37,11 @@ public class TenantService implements TenantUseCase {
     }
 
     @Override
+    public List<Tenant> getAllTenants() {
+        return tenantRepository.findAll();
+    }
+
+    @Override
     public Optional<Tenant> getTenantById(UUID id) {
         return tenantRepository.findById(id);
     }
@@ -55,6 +63,25 @@ public class TenantService implements TenantUseCase {
                 .logoUrl(logoUrl != null ? logoUrl : tenant.getLogoUrl())
                 .active(tenant.isActive())
                 .subscription(tenant.getSubscription())
+                .settings(tenant.getSettings())
+                .createdAt(tenant.getCreatedAt())
+                .updatedAt(Instant.now())
+                .build();
+        return tenantRepository.save(updated);
+    }
+
+    @Override
+    public Tenant updateTenantTier(UUID id, String tier) {
+        Tenant tenant = tenantRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + id));
+        Tenant updated = Tenant.builder()
+                .id(tenant.getId())
+                .name(tenant.getName())
+                .slug(tenant.getSlug())
+                .domain(tenant.getDomain())
+                .logoUrl(tenant.getLogoUrl())
+                .active(tenant.isActive())
+                .subscription(tier != null ? tier : tenant.getSubscription())
                 .settings(tenant.getSettings())
                 .createdAt(tenant.getCreatedAt())
                 .updatedAt(Instant.now())

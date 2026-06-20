@@ -13,7 +13,8 @@ import java.util.stream.Collectors;
 
 public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceRepository invRepo;
-    public InvoiceServiceImpl(InvoiceRepository invRepo) { this.invRepo = invRepo; }
+    private final InvoiceItemRepository itemRepo;
+    public InvoiceServiceImpl(InvoiceRepository invRepo, InvoiceItemRepository itemRepo) { this.invRepo = invRepo; this.itemRepo = itemRepo; }
 
     @Override public Invoice createInvoice(UUID tenantId, UUID branchId, String invoiceType, String customerName, LocalDate issueDate, LocalDate dueDate, BigDecimal subtotal, BigDecimal taxAmount, BigDecimal total) {
         return invRepo.save(Invoice.builder().id(UUID.randomUUID()).tenantId(tenantId).branchId(branchId)
@@ -21,6 +22,32 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .customerName(customerName).issueDate(issueDate).dueDate(dueDate)
                 .subtotal(subtotal).taxAmount(taxAmount).total(total).amountPaid(BigDecimal.ZERO).balanceDue(total)
                 .status("pending").currency("USD").createdAt(Instant.now()).build());
+    }
+
+    @Override public Invoice createInvoiceWithItems(UUID tenantId, UUID branchId, String invoiceType, String customerName, LocalDate issueDate, LocalDate dueDate, List<InvoiceItem> items) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+        if (items != null) {
+            for (InvoiceItem item : items) {
+                if (item == null) { continue; }
+                BigDecimal lineSubtotal = item.getTotal() != null ? item.getTotal() : BigDecimal.ZERO;
+                BigDecimal lineTax = item.getTaxAmount() != null ? item.getTaxAmount() : BigDecimal.ZERO;
+                subtotal = subtotal.add(lineSubtotal);
+                taxAmount = taxAmount.add(lineTax);
+            }
+        }
+        BigDecimal total = subtotal.add(taxAmount);
+        Invoice invoice = createInvoice(tenantId, branchId, invoiceType, customerName, issueDate, dueDate, subtotal, taxAmount, total);
+        if (items != null) {
+            for (InvoiceItem item : items) {
+                if (item == null || item.getDescription() == null) { continue; }
+                itemRepo.save(InvoiceItem.builder().id(UUID.randomUUID()).invoiceId(invoice.getId())
+                        .description(item.getDescription()).quantity(item.getQuantity()).unitPrice(item.getUnitPrice())
+                        .taxRate(item.getTaxRate()).taxAmount(item.getTaxAmount()).total(item.getTotal()).accountId(item.getAccountId())
+                        .build());
+            }
+        }
+        return invoice;
     }
     @Override public Optional<Invoice> getInvoiceById(UUID id) { return invRepo.findById(id); }
     @Override public List<Invoice> getInvoicesByTenant(UUID tenantId) { return invRepo.findByTenantId(tenantId); }

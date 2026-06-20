@@ -1,9 +1,9 @@
 package com.reportsystem.gateway.filter;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,11 +38,17 @@ public class BranchContextFilter implements GlobalFilter, Ordered {
     );
 
     private final String authServiceUrl;
-    private final Map<String, CachedUserBranches> cache = new ConcurrentHashMap<>();
-    private static final long CACHE_TTL_MS = 60_000L;
+    private final Map<String, CachedUserBranches> cache;
+    private static final long CACHE_TTL_MS = 300_000L;
 
     public BranchContextFilter(@Value("${auth-service.url:http://auth-service:8081}") String authServiceUrl) {
         this.authServiceUrl = authServiceUrl;
+        this.cache = new LinkedHashMap<>() {
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<String, CachedUserBranches> eldest) {
+                return size() > 5000;
+            }
+        };
     }
 
     @Override
@@ -117,9 +123,11 @@ public class BranchContextFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<List<UUID>> loadUserBranches(String cacheKey, String userId, String userEmail, String tenantId) {
-        CachedUserBranches cached = cache.get(cacheKey);
-        if (cached != null && !cached.isExpired()) {
-            return Mono.just(cached.branchIds());
+        synchronized (cache) {
+            CachedUserBranches cached = cache.get(cacheKey);
+            if (cached != null && !cached.isExpired()) {
+                return Mono.just(cached.branchIds());
+            }
         }
         return Mono.<List<UUID>>fromCallable(() -> {
             try {
@@ -147,7 +155,9 @@ public class BranchContextFilter implements GlobalFilter, Ordered {
                     String json = new String(is.readAllBytes());
                     log.debug("Response body: {}", json.length() > 500 ? json.substring(0, 500) + "..." : json);
                     List<UUID> ids = parseBranchIds(json);
-                    cache.put(cacheKey, new CachedUserBranches(ids, System.currentTimeMillis() + CACHE_TTL_MS));
+                    synchronized (cache) {
+                        cache.put(cacheKey, new CachedUserBranches(ids, System.currentTimeMillis() + CACHE_TTL_MS));
+                    }
                     return ids;
                 }
             } catch (Exception e) {

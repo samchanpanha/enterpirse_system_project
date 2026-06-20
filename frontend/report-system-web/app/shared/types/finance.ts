@@ -13,6 +13,15 @@ export interface JournalEntry {
   posted: boolean; postedAt?: string; createdBy?: string
   lines?: JournalEntryLine[]
 }
+export interface InvoiceItemInput {
+  description: string
+  quantity: number
+  unitPrice: number
+  taxRate?: number
+  taxAmount?: number
+  total?: number
+  accountId?: string
+}
 export interface Invoice {
   id: string; tenantId?: string; invoiceNumber: string
   invoiceType: string; sourceType?: string; sourceId?: string
@@ -21,6 +30,7 @@ export interface Invoice {
   subtotal: number; discount?: number; taxAmount: number
   total: number; amountPaid: number; balanceDue: number
   status: string; currency?: string; notes?: string
+  items?: InvoiceItemInput[]
 }
 export interface TaxRecord {
   id: string; tenantId: string; taxType: string

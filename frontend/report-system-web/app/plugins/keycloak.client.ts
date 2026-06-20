@@ -43,7 +43,7 @@ async function bridgeToBackend (kcToken: string | undefined) {
   if (!kcToken) { return }
   const config = useRuntimeConfig()
   try {
-    const resp = await $fetch(`${config.public.apiBaseUrl}/auth/sso-login`, {
+    const resp = await $fetch(`${config.public.apiBaseUrl}/api/auth/sso-login`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${kcToken}` }
     })

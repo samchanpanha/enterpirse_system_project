@@ -8,6 +8,7 @@ import lombok.*;
 public class Warehouse {
     private final UUID id;
     private final UUID tenantId;
+    private UUID branchId;
     private String name;
     private String type;
     private String location;

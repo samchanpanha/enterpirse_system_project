@@ -229,6 +229,7 @@ import { useFormSchema } from '~/composables/useFormSchema'
 definePageMeta({ middleware: 'auth' })
 
 const store = useRestaurantStore()
+const branchStore = useBranchStore()
 const { can } = usePermission()
 const { user } = useAuth()
 const { text, select, group, opt } = useFormSchema()
@@ -344,12 +345,8 @@ function removeFromCart (idx: number) {
 async function placeOrder () {
   if (cart.value.length === 0) { return }
   try {
-    const config = useRuntimeConfig()
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (user.value?.tenantId) { headers['X-Tenant-Id'] = user.value.tenantId }
-    await $fetch(`${config.public.apiBaseUrl}/restaurant/orders`, {
+    await branchStore.$apiWithBranch('/restaurant/orders/with-items', {
       method: 'POST',
-      headers,
       body: {
         tenantId: user.value!.tenantId,
         outletId: selectedOutletId.value,

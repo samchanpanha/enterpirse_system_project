@@ -14,6 +14,7 @@ public class FinanceConfig {
     private final JpaJournalEntryRepository jeRepo;
     private final JpaJournalEntryLineRepository jelRepo;
     private final JpaInvoiceRepository invRepo;
+    private final JpaInvoiceItemRepository invItemRepo;
     private final JpaTaxRecordRepository trRepo;
     private final JpaTaxFilingReportRepository tfrRepo;
     private final JpaEmployeeRepository empRepo;
@@ -21,15 +22,16 @@ public class FinanceConfig {
     private final JpaPayrollItemRepository piRepo;
 
     public FinanceConfig(JpaAccountRepository ar, JpaJournalEntryRepository jer, JpaJournalEntryLineRepository jelr,
-                         JpaInvoiceRepository ir, JpaTaxRecordRepository trr, JpaTaxFilingReportRepository tfrr,
+                         JpaInvoiceRepository ir, JpaInvoiceItemRepository iir, JpaTaxRecordRepository trr, JpaTaxFilingReportRepository tfrr,
                          JpaEmployeeRepository er, JpaPayrollPeriodRepository ppr, JpaPayrollItemRepository pir) {
-        accountRepo = ar; jeRepo = jer; jelRepo = jelr; invRepo = ir; trRepo = trr; tfrRepo = tfrr; empRepo = er; ppRepo = ppr; piRepo = pir;
+        accountRepo = ar; jeRepo = jer; jelRepo = jelr; invRepo = ir; invItemRepo = iir; trRepo = trr; tfrRepo = tfrr; empRepo = er; ppRepo = ppr; piRepo = pir;
     }
 
     @Bean public AccountRepository accountRepository() { return new JpaAccountAdapter(accountRepo); }
     @Bean public JournalEntryRepository journalEntryRepository() { return new JpaJournalEntryAdapter(jeRepo); }
     @Bean public JournalEntryLineRepository journalEntryLineRepository() { return new JpaJournalEntryLineAdapter(jelRepo); }
     @Bean public InvoiceRepository invoiceRepository() { return new JpaInvoiceAdapter(invRepo); }
+    @Bean public InvoiceItemRepository invoiceItemRepository() { return new JpaInvoiceItemAdapter(invItemRepo); }
     @Bean public TaxRecordRepository taxRecordRepository() { return new JpaTaxRecordAdapter(trRepo); }
     @Bean public TaxFilingReportRepository taxFilingReportRepository() { return new JpaTaxFilingReportAdapter(tfrRepo); }
     @Bean public EmployeeRepository employeeRepository() { return new JpaEmployeeAdapter(empRepo); }
@@ -37,7 +39,7 @@ public class FinanceConfig {
     @Bean public PayrollItemRepository payrollItemRepository() { return new JpaPayrollItemAdapter(piRepo); }
 
     @Bean public AccountingServiceImpl accountingService(AccountRepository ar, JournalEntryRepository jer, JournalEntryLineRepository jelr) { return new AccountingServiceImpl(ar, jer, jelr); }
-    @Bean public InvoiceServiceImpl invoiceService(InvoiceRepository ir) { return new InvoiceServiceImpl(ir); }
+    @Bean public InvoiceServiceImpl invoiceService(InvoiceRepository ir, InvoiceItemRepository iir) { return new InvoiceServiceImpl(ir, iir); }
     @Bean public TaxServiceImpl taxService(TaxRecordRepository trr, TaxFilingReportRepository tfrr) { return new TaxServiceImpl(trr, tfrr); }
     @Bean public PayrollServiceImpl payrollService(EmployeeRepository er, PayrollPeriodRepository ppr, PayrollItemRepository pir) { return new PayrollServiceImpl(er, ppr, pir); }
 }

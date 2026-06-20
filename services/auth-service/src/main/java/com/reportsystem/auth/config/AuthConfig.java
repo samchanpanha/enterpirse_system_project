@@ -7,6 +7,8 @@ import com.reportsystem.auth.domain.service.JwtService;
 import com.reportsystem.auth.domain.service.TenantService;
 import com.reportsystem.auth.domain.service.UserService;
 import com.reportsystem.auth.domain.port.outbound.RoleRepository;
+import com.reportsystem.auth.infrastructure.persistence.repository.JpaUserRoleRepository;
+import com.reportsystem.auth.infrastructure.persistence.repository.JpaRolePermissionRepository;
 import com.reportsystem.shared.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -47,12 +49,16 @@ public class AuthConfig {
     }
 
     @Bean
-    public UserService userService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
-        return new UserService(userRepository, roleRepository, passwordEncoder);
+    public UserService userService(UserRepository userRepository, RoleRepository roleRepository,
+                                   JpaUserRoleRepository jpaUserRoleRepository,
+                                   JpaRolePermissionRepository jpaRolePermissionRepository,
+                                   PasswordEncoder passwordEncoder) {
+        return new UserService(userRepository, roleRepository, jpaUserRoleRepository, jpaRolePermissionRepository, passwordEncoder);
     }
 
     @Bean
-    public AuthService authService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
-        return new AuthService(userRepository, passwordEncoder, jwtTokenProvider);
+    public AuthService authService(UserRepository userRepository, UserService userService,
+                                   PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+        return new AuthService(userRepository, userService, passwordEncoder, jwtTokenProvider);
     }
 }

@@ -12,6 +12,6 @@ import lombok.*;
 public class ReportDefinition {
     private final UUID id; private final UUID tenantId; private final UUID branchId;
     private String name; private String code; private String type;
-    private String config; private boolean system;
+    private String config; private String layout; private boolean system;
     private final Instant createdAt; private Instant updatedAt;
 }

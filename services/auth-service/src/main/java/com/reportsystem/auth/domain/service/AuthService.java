@@ -12,11 +12,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class AuthService implements AuthUseCase {
 
     private final UserRepository userRepository;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+    public AuthService(UserRepository userRepository, UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
+        this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
     }
@@ -51,7 +53,10 @@ public class AuthService implements AuthUseCase {
 
     @Override
     public String generateAccessToken(User user) {
-        return jwtTokenProvider.generateAccessToken(user.getId(), user.getTenantId(), user.getEmail(), List.of());
+        List<String> roles = userService.getUserRoles(user.getId()).stream()
+                .map(role -> role.getName())
+                .toList();
+        return jwtTokenProvider.generateAccessToken(user.getId(), user.getTenantId(), user.getEmail(), roles);
     }
 
     @Override
@@ -65,7 +70,10 @@ public class AuthService implements AuthUseCase {
             UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            return jwtTokenProvider.generateAccessToken(user.getId(), user.getTenantId(), user.getEmail(), List.of());
+            List<String> roles = userService.getUserRoles(userId).stream()
+                    .map(role -> role.getName())
+                    .toList();
+            return jwtTokenProvider.generateAccessToken(user.getId(), user.getTenantId(), user.getEmail(), roles);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }

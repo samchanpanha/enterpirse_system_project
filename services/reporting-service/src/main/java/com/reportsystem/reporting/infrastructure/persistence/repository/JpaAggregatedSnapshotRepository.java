@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface JpaAggregatedSnapshotRepository extends JpaRepository<AggregatedSnapshotEntity, UUID> {
     Optional<AggregatedSnapshotEntity> findByTenantIdAndSnapshotTypeAndSnapshotDate(UUID t, String type, LocalDate d);
+    List<AggregatedSnapshotEntity> findByTenantId(UUID t);
+    List<AggregatedSnapshotEntity> findByTenantIdAndBranchId(UUID t, UUID b);
 }

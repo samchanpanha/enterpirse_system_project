@@ -6,9 +6,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ReportService {
-    ReportDefinition createDefinition(UUID tenantId, UUID branchId, String name, String type, String config);
+    ReportDefinition createDefinition(UUID tenantId, UUID branchId, String name, String type, String config, String layout);
     Optional<ReportDefinition> getDefinitionById(UUID id);
     List<ReportDefinition> getDefinitionsByTenant(UUID tenantId);
     List<ReportDefinition> getDefinitionsByTenantAndBranch(UUID tenantId, UUID branchId);
-    ReportExecution executeReport(UUID reportId, UUID tenantId, String parameters, UUID requestedBy);
+    ReportExecution executeReport(UUID reportId, UUID tenantId, UUID branchId, String parameters, UUID requestedBy);
+    Optional<ReportExecution> getExecutionById(UUID id);
+    List<ReportExecution> getExecutionsByReportId(UUID reportId);
+    List<ReportExecution> getExecutionsByReportIdAndBranch(UUID reportId, UUID branchId);
 }

@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface AggregatedSnapshotRepository {
     AggregatedSnapshot save(AggregatedSnapshot s);
     Optional<AggregatedSnapshot> findByTenantIdAndSnapshotTypeAndSnapshotDate(UUID tenantId, String type, java.time.LocalDate date);
+    List<AggregatedSnapshot> findByTenantId(UUID tenantId);
+    List<AggregatedSnapshot> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
 }

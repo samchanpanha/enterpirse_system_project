@@ -37,6 +37,21 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Order createOrderWithItems(UUID tenantId, UUID branchId, UUID outletId, UUID tableId, UUID customerId, String type, String notes, UUID servedBy, List<OrderItem> items) {
+        Order order = createOrder(tenantId, branchId, outletId, tableId, customerId, type, notes, servedBy);
+        if (items != null) {
+            for (OrderItem item : items) {
+                if (item == null || item.getMenuItemId() == null || item.getQuantity() <= 0) {
+                    continue;
+                }
+                BigDecimal price = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+                addItem(order.getId(), item.getMenuItemId(), item.getQuantity(), price, item.getModifiers());
+            }
+        }
+        return getOrderById(order.getId()).orElse(order);
+    }
+
+    @Override
     public Order addItem(UUID orderId, UUID menuItemId, int quantity, BigDecimal unitPrice, String modifiers) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
@@ -66,6 +81,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<Order> getOrdersByOutlet(UUID outletId, String status) {
         return orderRepository.findByOutletIdAndStatus(outletId, status);
+    }
+
+    @Override
+    public List<Order> getOrdersByTenantAndBranch(UUID tenantId, UUID branchId) {
+        return orderRepository.findByTenantIdAndBranchId(tenantId, branchId);
     }
 
     @Override

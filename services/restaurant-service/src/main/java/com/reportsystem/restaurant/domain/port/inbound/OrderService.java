@@ -8,10 +8,12 @@ import java.util.UUID;
 
 public interface OrderService {
     Order createOrder(UUID tenantId, UUID branchId, UUID outletId, UUID tableId, UUID customerId, String type, String notes, UUID servedBy);
+    Order createOrderWithItems(UUID tenantId, UUID branchId, UUID outletId, UUID tableId, UUID customerId, String type, String notes, UUID servedBy, List<OrderItem> items);
     Order addItem(UUID orderId, UUID menuItemId, int quantity, java.math.BigDecimal unitPrice, String modifiers);
     Order removeItem(UUID orderId, UUID orderItemId);
     Optional<Order> getOrderById(UUID id);
     List<Order> getOrdersByOutlet(UUID outletId, String status);
+    List<Order> getOrdersByTenantAndBranch(UUID tenantId, UUID branchId);
     Order updateStatus(UUID id, String status);
     Order completeOrder(UUID id, java.math.BigDecimal discount, java.math.BigDecimal serviceCharge, String paymentMethod);
     List<OrderItem> getOrderItems(UUID orderId);

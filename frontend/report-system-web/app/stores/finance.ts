@@ -37,7 +37,7 @@ export const useFinanceStore = defineStore('finance', () => {
     try { invoices.value = await branchStore.$apiWithBranch<Invoice[]>(`/finance/invoices/by-tenant/${tenantId}`) } finally { loading.value = false }
   }
   async function createInvoice (data: Partial<Invoice>) {
-    const inv = await branchStore.$apiWithBranch<Invoice>('/finance/invoices', { method: 'POST', body: data })
+    const inv = await branchStore.$apiWithBranch<Invoice>('/finance/invoices/with-items', { method: 'POST', body: data })
     invoices.value.push(inv)
     return inv
   }

@@ -32,6 +32,38 @@ public class OrderController {
                         b.get("servedBy") != null ? UUID.fromString((String)b.get("servedBy")) : null));
     }
 
+    @PostMapping("/with-items")
+    public ResponseEntity<Order> createWithItems(@RequestHeader(value = "X-Branch-Id", required = false) String branchId,
+                                                 @RequestBody Map<String, Object> b) {
+        UUID bid = branchId != null && !branchId.isBlank() ? UUID.fromString(branchId) : null;
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rawItems = (List<Map<String, Object>>) b.get("items");
+        List<OrderItem> items = new ArrayList<>();
+        if (rawItems != null) {
+            for (Map<String, Object> raw : rawItems) {
+                OrderItem item = OrderItem.builder()
+                        .id(UUID.randomUUID())
+                        .menuItemId(UUID.fromString((String) raw.get("menuItemId")))
+                        .quantity((Integer) raw.get("quantity"))
+                        .unitPrice(new BigDecimal(raw.get("unitPrice").toString()))
+                        .modifiers((String) raw.get("modifiers"))
+                        .build();
+                items.add(item);
+            }
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                orderService.createOrderWithItems(
+                        UUID.fromString((String)b.get("tenantId")),
+                        bid,
+                        UUID.fromString((String)b.get("outletId")),
+                        b.get("tableId") != null ? UUID.fromString((String)b.get("tableId")) : null,
+                        b.get("customerId") != null ? UUID.fromString((String)b.get("customerId")) : null,
+                        (String)b.getOrDefault("type", "dine_in"),
+                        (String)b.get("notes"),
+                        b.get("servedBy") != null ? UUID.fromString((String)b.get("servedBy")) : null,
+                        items));
+    }
+
     @PostMapping("/{id}/items")
     public ResponseEntity<Order> addItem(@PathVariable UUID id, @RequestBody Map<String, Object> b) {
         return ResponseEntity.ok(orderService.addItem(id,
@@ -55,6 +87,13 @@ public class OrderController {
     public ResponseEntity<List<Order>> getByOutlet(@PathVariable UUID outletId,
                                                     @RequestParam(defaultValue = "pending") String status) {
         return ResponseEntity.ok(orderService.getOrdersByOutlet(outletId, status));
+    }
+
+    @GetMapping("/by-tenant/{tenantId}")
+    public ResponseEntity<List<Order>> getByTenant(@PathVariable UUID tenantId,
+                                                   @RequestHeader(value = "X-Branch-Id", required = false) String branchId) {
+        UUID bid = branchId != null && !branchId.isBlank() ? UUID.fromString(branchId) : null;
+        return ResponseEntity.ok(orderService.getOrdersByTenantAndBranch(tenantId, bid));
     }
 
     @GetMapping("/{id}/items")

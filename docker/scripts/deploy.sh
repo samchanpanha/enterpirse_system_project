@@ -125,7 +125,13 @@ local_logs() {
 local_restart() {
   header "LOCAL: Restart"
   check_docker
-  compose_cmd "$COMPOSE_FILE" restart
+  # Use down + up so Docker Compose re-applies depends_on conditions.
+  # A plain `docker compose restart` starts all containers at once and
+  # can leave kafka/inventory/finance unhealthy because their dependencies
+  # are not ready in time.
+  compose_cmd "$COMPOSE_FILE" down
+  compose_cmd "$COMPOSE_FILE" up -d
+  bash "$SCRIPT_DIR/keycloak-ensure-admin.sh"
   wait_for_healthy
   local_status
 }
@@ -164,22 +170,40 @@ local_clean() {
 wait_for_healthy() {
   log "Waiting for services to become healthy (max 180s)..."
   local elapsed=0
-  local healthy_count=0
+  local ready_count=0
   local target_count
   target_count=$(compose_cmd "$COMPOSE_FILE" config --services 2>/dev/null | wc -l | tr -d ' ')
 
   while [[ $elapsed -lt 180 ]]; do
-    healthy_count=$(compose_cmd "$COMPOSE_FILE" ps --format json 2>/dev/null \
-      | grep -c '"Health":"healthy"' 2>/dev/null || echo 0)
-    if [[ "$healthy_count" -ge "$target_count" ]]; then
-      ok "All $target_count services healthy"
+    ready_count=$(compose_cmd "$COMPOSE_FILE" ps --format json 2>/dev/null \
+      | python3 -c "
+import sys, json
+ready = 0
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    # Each line is a separate JSON object
+    try:
+        obj = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    health = obj.get('Health', '')
+    state = obj.get('State', '')
+    # Services with a healthcheck must be healthy; services without one must be running
+    if health == 'healthy' or (health == '' and state == 'running'):
+        ready += 1
+print(ready)
+" 2>/dev/null || echo 0)
+    if [[ "$ready_count" -ge "$target_count" ]]; then
+      ok "All $target_count services ready"
       return 0
     fi
     sleep 5
     elapsed=$((elapsed + 5))
     echo -n "."
   done
-  warn "Timeout: $healthy_count/$target_count services healthy after 180s"
+  warn "Timeout: $ready_count/$target_count services ready after 180s"
   warn "Run '$0 local logs' to inspect"
 }
 

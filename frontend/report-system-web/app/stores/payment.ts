@@ -15,7 +15,7 @@ export const usePaymentStore = defineStore('payment', () => {
 
   async function fetchReconciliations (tenantId: string) {
     loading.value = true
-    try { reconciliations.value = await branchStore.$apiWithBranch(`/payment/reconciliation/by-tenant/${tenantId}`) } finally { loading.value = false }
+    try { reconciliations.value = await branchStore.$apiWithBranch(`/payment/payments/reconciliation/by-tenant/${tenantId}`) } finally { loading.value = false }
   }
 
   async function processPayment (data: any) {

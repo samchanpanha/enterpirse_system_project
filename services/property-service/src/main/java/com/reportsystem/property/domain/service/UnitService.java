@@ -18,10 +18,11 @@ public class UnitService implements UnitUseCase {
     }
 
     @Override
-    public Unit createUnit(UUID tenantId, UUID branchId, UUID propertyId, String label, Integer floor, Integer bedrooms, Integer bathrooms) {
+    public Unit createUnit(UUID tenantId, UUID branchId, UUID propertyId, String label, Integer floor, Integer bedrooms, Integer bathrooms, BigDecimal rentAmount) {
         Unit unit = Unit.builder()
                 .id(UUID.randomUUID()).tenantId(tenantId).branchId(branchId).propertyId(propertyId)
                 .label(label).floor(floor).bedrooms(bedrooms).bathrooms(bathrooms)
+                .rentAmount(rentAmount != null ? rentAmount : BigDecimal.ZERO)
                 .currency("USD").status("vacant").amenities("[]").images("[]")
                 .createdAt(Instant.now())
                 .build();

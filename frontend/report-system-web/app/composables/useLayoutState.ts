@@ -4,6 +4,7 @@ export interface MenuItem {
   icon?: string
   children?: MenuItem[]
   feature?: string
+  permission?: string
   meta?: {
     hidden?: boolean
     requireAuth?: boolean
@@ -13,10 +14,18 @@ export interface MenuItem {
 }
 
 const STORAGE_KEY = 'layout.sidebar.collapsed'
+const DARK_MODE_KEY = 'layout.darkMode'
 
 export const useLayoutState = () => {
   const sidebarCollapsed = useState<boolean>('layout.sidebar.collapsed', () => false)
   const mobileSidebarOpen = useState<boolean>('layout.mobileSidebar.open', () => false)
+  const darkMode = useState<boolean>('layout.darkMode', () => false)
+
+  function applyDarkMode (enabled: boolean) {
+    if (import.meta.client) {
+      document.documentElement.classList.toggle('dark', enabled)
+    }
+  }
 
   function initFromStorage () {
     if (!import.meta.client) { return }
@@ -24,6 +33,11 @@ export const useLayoutState = () => {
     if (saved !== null) {
       sidebarCollapsed.value = saved === 'true'
     }
+    const savedDark = localStorage.getItem(DARK_MODE_KEY)
+    if (savedDark !== null) {
+      darkMode.value = savedDark === 'true'
+    }
+    applyDarkMode(darkMode.value)
   }
 
   function toggleSidebar () {
@@ -40,6 +54,14 @@ export const useLayoutState = () => {
     }
   }
 
+  function toggleDarkMode () {
+    darkMode.value = !darkMode.value
+    if (import.meta.client) {
+      localStorage.setItem(DARK_MODE_KEY, String(darkMode.value))
+      applyDarkMode(darkMode.value)
+    }
+  }
+
   function openMobileSidebar () {
     mobileSidebarOpen.value = true
   }
@@ -51,9 +73,11 @@ export const useLayoutState = () => {
   return {
     sidebarCollapsed,
     mobileSidebarOpen,
+    darkMode,
     initFromStorage,
     toggleSidebar,
     setSidebar,
+    toggleDarkMode,
     openMobileSidebar,
     closeMobileSidebar
   }

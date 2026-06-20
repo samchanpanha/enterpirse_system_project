@@ -17,6 +17,7 @@ public class ReportDefinitionEntity {
     @Column(name = "tenant_id", nullable = false) private UUID tenantId;
     private String name; private String code; private String type;
     @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb NOT NULL") private String config;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb") private String layout;
     @Column(name = "is_system") private boolean system;
     @Column(name = "branch_id", nullable = false) private UUID branchId;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;

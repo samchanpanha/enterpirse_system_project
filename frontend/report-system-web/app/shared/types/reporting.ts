@@ -1,8 +1,15 @@
+export interface ReportColumn {
+  name: string
+  key: string
+  type: 'text' | 'number' | 'date' | 'currency' | 'boolean'
+}
+
 export interface ReportDefinition {
   id: string; tenantId: string
   name: string; code?: string
   type: string
-  config: string
+  config?: any
+  layout?: ReportColumn[] | string
   system: boolean
   createdBy?: string
   createdAt?: string; updatedAt?: string
@@ -20,13 +27,17 @@ export interface ScheduledReport {
 
 export interface ReportExecution {
   id: string; tenantId: string
-  reportDefinitionId: string
+  reportId: string
   status: string
-  startedAt: string
-  completedAt?: string
   rowCount?: number
+  durationMs?: number
   errorMessage?: string
-  resultUrl?: string
+  resultData?: any[]
+  outputUrl?: string
+  parameters?: string
+  requestedBy?: string
+  startedAt?: string
+  completedAt?: string
 }
 
 export interface DashboardConfig {

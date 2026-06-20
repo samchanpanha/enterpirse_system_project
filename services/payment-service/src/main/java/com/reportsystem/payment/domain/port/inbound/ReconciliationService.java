@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface ReconciliationService {
     ReconciliationRecord startReconciliation(UUID tenantId, UUID branchId, String gateway, java.time.LocalDate date);
     ReconciliationRecord completeReconciliation(UUID id);
+    List<ReconciliationRecord> findByTenant(UUID tenantId);
+    List<ReconciliationRecord> findByTenantAndBranch(UUID tenantId, UUID branchId);
 }

@@ -10,6 +10,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
+log()  { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
+ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
+fail() { echo -e "${RED}  ✗${NC} $*" >&2; exit 1; }
+
 # 0. Ensure Keycloak master realm allows HTTP (dev-only; production uses HTTPS)
 bash "$SCRIPT_DIR/keycloak-ensure-admin.sh" >/dev/null || true
 
@@ -21,13 +26,9 @@ bash "$SCRIPT_DIR/keycloak-add-mappers.sh" >/dev/null && ok "Keycloak mappers pr
 
 API="http://localhost:8080/api"
 TENANT="00000000-0000-0000-0000-000000000001"
+HQ_BRANCH="00000000-0000-0000-0000-000000000010"
 EMAIL="admin@demo.com"
 PASSWORD="Demo123!"
-
-RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
-log()  { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
-ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
-fail() { echo -e "${RED}  ✗${NC} $*" >&2; exit 1; }
 
 # 1. Login
 log "Logging in as $EMAIL..."
@@ -38,7 +39,7 @@ TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.st
   || fail "Login failed: $LOGIN_RESP"
 ok "Token acquired (${#TOKEN} chars)"
 
-AUTH=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -H "X-Branch-Id: $HQ_BRANCH")
 
 # post <path> <json> -> echoes response body, returns HTTP code via $?
 post() {
@@ -137,6 +138,43 @@ done
 log "Seeding reporting: 1 dashboard..."
 post_ok "$API/reporting/dashboards" "{\"tenantId\":\"$TENANT\",\"name\":\"Main Dashboard\",\"layout\":\"{}\",\"isDefault\":true}" "Dashboard"
 
+# 8. Extract user ID and assign to HQ branch (for branch-context filtering)
+log "Assigning admin user to HQ branch..."
+USER_ID=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['user']['id'])" 2>/dev/null) || fail "Could not extract user ID from login response"
+post_ok "$API/user-branches" "{\"userId\":\"$USER_ID\",\"branchId\":\"$HQ_BRANCH\",\"role\":\"ADMIN\",\"isDefault\":true}" "Admin → HQ branch assignment"
+
+# 9. Inventory: 3 products
+log "Seeding inventory: 3 products..."
+for prod in \
+  '{"name":"Jasmine Rice 50kg","sku":"RICE-J50","unitPrice":32.50}' \
+  '{"name":"Cooking Oil 5L","sku":"OIL-C5","unitPrice":8.75}' \
+  '{"name":"Fish Sauce 1L","sku":"FISH-1L","unitPrice":3.25}'
+do
+  payload=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); d['tenantId']=sys.argv[2]; print(json.dumps(d))" "$prod" "$TENANT")
+  post_ok "$API/inventory/products" "$payload" "Product: $(echo "$prod" | python3 -c 'import sys,json; print(json.load(sys.stdin)["name"])')"
+done
+
+# 10. Inventory: 1 warehouse (insert directly — no API endpoint exists)
+log "Seeding inventory: 1 warehouse..."
+WID="00000000-0000-0000-0000-000000000100"
+docker exec report-postgres psql -U report_user -d inventory_db -c \
+  "INSERT INTO warehouses (id, tenant_id, branch_id, name, type, location, is_active, created_at) \
+   VALUES ('$WID', '$TENANT', '$HQ_BRANCH', 'Main Warehouse', 'central', 'Phnom Penh', true, NOW()) \
+   ON CONFLICT (id) DO NOTHING;" 2>/dev/null && ok "Warehouse: Main Warehouse ($WID)" \
+  || fail "Warehouse insert failed"
+
+# Ensure a second branch exists in inventory_db for stock transfer target
+BR01_ID="00000000-0000-0000-0000-000000000011"
+docker exec report-postgres psql -U report_user -d inventory_db -c \
+  "INSERT INTO branches (id, tenant_id, code, name, branch_type, city, is_active, created_at) \
+   VALUES ('$BR01_ID', '$TENANT', 'BR01', 'Branch 01', 'STORE', 'Phnom Penh', true, NOW()) \
+   ON CONFLICT (id) DO NOTHING;" 2>/dev/null && ok "Branch BR01 in inventory_db" \
+  || log "Branch BR01 already exists or insert skipped"
+
+# 11. Finance: Inter-Branch Clearing account (1999-IBC)
+log "Seeding finance: Inter-Branch Clearing account..."
+post_ok "$API/finance/accounts" "{\"tenantId\":\"$TENANT\",\"code\":\"1999-IBC\",\"name\":\"Inter-Branch Clearing\",\"type\":\"LIABILITY\",\"active\":true,\"contra\":false}" "Account: Inter-Branch Clearing (1999-IBC)"
+
 # ─── Summary ────────────────────────────────────────────────────────────────
 echo ""
 log "Summary:"
@@ -150,6 +188,7 @@ printf "  • %-14s %s\n" "Properties"   "$(get_count property/properties/by-ten
 printf "  • %-14s %s\n" "Outlets"      "$(get_count restaurant/outlets/by-tenant/$TENANT)"
 printf "  • %-14s %s\n" "Categories"   "$(get_count restaurant/categories/by-tenant/$TENANT)"
 printf "  • %-14s %s\n" "Suppliers"    "$(get_count inventory/suppliers/by-tenant/$TENANT)"
+printf "  • %-14s %s\n" "Products"     "$(get_count inventory/products/by-tenant/$TENANT)"
 printf "  • %-14s %s\n" "Reports"      "$(get_count reporting/reports/definitions/by-tenant/$TENANT)"
 printf "  • %-14s %s\n" "Dashboards"   "$(get_count reporting/dashboards/by-tenant/$TENANT)"
 echo ""

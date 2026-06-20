@@ -32,6 +32,7 @@ class AuthServiceTest {
     private static final long REFRESH_TOKEN_EXPIRATION = 604_800_000L;
 
     @Mock private UserRepository userRepository;
+    @Mock private UserService userService;
     @Mock private PasswordEncoder passwordEncoder;
     private JwtTokenProvider jwtTokenProvider;
     private AuthService authService;
@@ -41,7 +42,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         jwtTokenProvider = new JwtTokenProvider(JWT_SECRET, ACCESS_TOKEN_EXPIRATION, REFRESH_TOKEN_EXPIRATION);
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtTokenProvider);
     }
 
     @Test
@@ -164,6 +165,8 @@ class AuthServiceTest {
             .createdAt(java.time.Instant.now())
             .build();
 
+        when(userService.getUserRoles(userId)).thenReturn(java.util.List.of());
+
         String token = authService.generateAccessToken(user);
 
         assertThat(token).isNotBlank();
@@ -206,6 +209,7 @@ class AuthServiceTest {
             .build();
         String refresh = authService.generateRefreshToken(user);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserRoles(userId)).thenReturn(java.util.List.of());
 
         String newAccess = authService.refreshAccessToken(refresh);
 

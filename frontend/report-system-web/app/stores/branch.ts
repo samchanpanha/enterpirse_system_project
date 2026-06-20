@@ -12,11 +12,11 @@ export const useBranchStore = defineStore('branch', () => {
   )
 
   async function fetchBranches () {
-    if (!user.value?.tenantId) { return }
+    if (!user.value?.tenantId || !token.value) { return }
     loading.value = true
     try {
       branches.value = await $fetch<Branch[]>('/api/branches', {
-        headers: { 'X-Tenant-Id': user.value.tenantId }
+        headers: { 'X-Tenant-Id': user.value.tenantId, Authorization: `Bearer ${token.value}` }
       })
       // Auto-select default branch if none selected
       if (!currentBranchId.value && branches.value.length > 0) {
@@ -58,11 +58,12 @@ export const useBranchStore = defineStore('branch', () => {
   }
 
   function $apiWithBranch<T = any> (url: string, opts: any = {}): Promise<T> {
+    const fullUrl = `/api${url}`
     if (currentBranchId.value) {
-      const sep = url.includes('?') ? '&' : '?'
-      url = `${url}${sep}branchId=${currentBranchId.value}`
+      const sep = fullUrl.includes('?') ? '&' : '?'
+      return api()(`${fullUrl}${sep}branchId=${currentBranchId.value}`, opts) as Promise<T>
     }
-    return api()(url, opts) as Promise<T>
+    return api()(fullUrl, opts) as Promise<T>
   }
 
   if (import.meta.client) {

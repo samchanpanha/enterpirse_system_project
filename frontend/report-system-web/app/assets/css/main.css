@@ -3,3 +3,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-body: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --bg-sidebar: #001529;
+  --border-color: #e8eaec;
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.65);
+  --text-disabled: rgba(0, 0, 0, 0.45);
+}
+
+.dark {
+  --bg-body: #141414;
+  --bg-card: #1f1f1f;
+  --bg-header: #1f1f1f;
+  --bg-sidebar: #000000;
+  --border-color: #303030;
+  --text-primary: rgba(255, 255, 255, 0.85);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-disabled: rgba(255, 255, 255, 0.45);
+}

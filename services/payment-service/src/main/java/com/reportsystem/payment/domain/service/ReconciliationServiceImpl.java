@@ -20,4 +20,6 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         ReconciliationRecord r = recRepo.findById(id).orElseThrow();
         return recRepo.save(ReconciliationRecord.builder().id(r.getId()).tenantId(r.getTenantId()).branchId(r.getBranchId()).gateway(r.getGateway()).statementDate(r.getStatementDate()).totalExpected(r.getTotalExpected()).totalMatched(r.getTotalMatched()).totalUnmatched(r.getTotalUnmatched()).status("completed").matchedCount(r.getMatchedCount()).unmatchedCount(r.getUnmatchedCount()).processedAt(Instant.now()).createdAt(r.getCreatedAt()).build());
     }
+    @Override public List<ReconciliationRecord> findByTenant(UUID tenantId) { return recRepo.findByTenantId(tenantId); }
+    @Override public List<ReconciliationRecord> findByTenantAndBranch(UUID tenantId, UUID branchId) { return recRepo.findByTenantIdAndBranchId(tenantId, branchId); }
 }

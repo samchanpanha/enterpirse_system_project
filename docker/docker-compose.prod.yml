@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -23,23 +21,45 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
-      - kafka-zookeeper
+      kafka-zookeeper:
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   kafka-zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 | grep Mode"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   redis:
     image: redis:7-alpine
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   minio:
     image: minio/minio:latest
@@ -58,6 +78,11 @@ services:
     ports:
       - "8761:8761"
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   gateway:
     build:
@@ -66,8 +91,26 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - eureka
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=demo-corp
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KEYCLOAK_REALM_TENANT_MAPPING=demo-corp=00000000-0000-0000-0000-000000000001
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - JWT_SECRET=${JWT_SECRET:-base64EncodedSecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   auth-service:
     build:
@@ -76,9 +119,25 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auth_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=demo-corp
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - JWT_SECRET=${JWT_SECRET:-base64EncodedSecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   property-service:
     build:
@@ -87,9 +146,20 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/property_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   restaurant-service:
     build:
@@ -98,9 +168,20 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/restaurant_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   inventory-service:
     build:
@@ -109,9 +190,23 @@ services:
     ports:
       - "8084:8084"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventory_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   finance-service:
     build:
@@ -120,9 +215,23 @@ services:
     ports:
       - "8085:8085"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/finance_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   payment-service:
     build:
@@ -131,9 +240,20 @@ services:
     ports:
       - "8086:8086"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payment_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   reporting-service:
     build:
@@ -142,9 +262,20 @@ services:
     ports:
       - "8087:8087"
     depends_on:
-      - postgres
-      - eureka
+      postgres:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/reporting_db
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   nuxt-web:
     build:
@@ -153,7 +284,14 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
+    environment:
+      - NUXT_PUBLIC_API_BASE_URL=http://gateway:8080
+      - NUXT_API_BASE_URL=http://gateway:8080
+      - NUXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
+      - NUXT_PUBLIC_KEYCLOAK_REALM=demo-corp
+      - NUXT_PUBLIC_KEYCLOAK_CLIENT_ID=report-system-web
     restart: always
 
 volumes:

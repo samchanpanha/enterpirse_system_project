@@ -1,9 +1,7 @@
 package com.reportsystem.auth.infrastructure.web;
 
 import com.reportsystem.auth.domain.model.Tenant;
-import com.reportsystem.auth.domain.model.User;
 import com.reportsystem.auth.domain.service.TenantService;
-import com.reportsystem.auth.domain.service.UserService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +35,11 @@ public class TenantController {
         return ResponseEntity.status(HttpStatus.CREATED).body(tenant);
     }
 
+    @GetMapping
+    public ResponseEntity<List<Tenant>> listTenants() {
+        return ResponseEntity.ok(tenantService.getAllTenants());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Tenant> getTenant(@PathVariable UUID id) {
         return tenantService.getTenantById(id)
@@ -48,6 +52,22 @@ public class TenantController {
         return tenantService.getTenantBySlug(slug)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Tenant> updateTenant(@PathVariable UUID id, @RequestBody Map<String, String> request) {
+        Tenant tenant = tenantService.updateTenant(
+                id,
+                request.get("name"),
+                request.get("domain"),
+                request.get("logoUrl"));
+        return ResponseEntity.ok(tenant);
+    }
+
+    @PatchMapping("/{id}/tier")
+    public ResponseEntity<Tenant> updateTier(@PathVariable UUID id, @RequestBody Map<String, String> request) {
+        Tenant tenant = tenantService.updateTenantTier(id, request.get("tier"));
+        return ResponseEntity.ok(tenant);
     }
 
     @PatchMapping("/{id}/activate")

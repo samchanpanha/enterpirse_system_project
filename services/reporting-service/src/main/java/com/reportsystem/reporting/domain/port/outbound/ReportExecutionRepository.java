@@ -9,4 +9,6 @@ public interface ReportExecutionRepository {
     ReportExecution save(ReportExecution e);
     Optional<ReportExecution> findById(UUID id);
     List<ReportExecution> findByTenantId(UUID tenantId);
+    List<ReportExecution> findByReportId(UUID reportId);
+    List<ReportExecution> findByReportIdAndBranchId(UUID reportId, UUID branchId);
 }

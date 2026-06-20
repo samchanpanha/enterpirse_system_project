@@ -1,23 +1,17 @@
 import { defineStore } from 'pinia'
+import type { ReportDefinition, ReportExecution, DashboardConfig } from '~/shared/types/reporting'
 
-export interface ReportDefinition {
-  id: string; tenantId: string; name: string
-  code?: string; type: string; config: string
-  system: boolean
+function safeJsonParse<T = any> (value: any): T | undefined {
+  if (value == null) { return undefined }
+  if (typeof value === 'string') {
+    try { return JSON.parse(value) as T } catch { return value as unknown as T }
+  }
+  return value as T
 }
-export interface ReportExecution {
-  id: string; reportId: string; tenantId: string
-  parameters?: string; status: string
-  outputUrl?: string; rowCount?: number
-  durationMs?: number; errorMessage?: string
-  requestedBy?: string
-  startedAt?: string; completedAt?: string
-}
-export interface DashboardConfig {
-  id: string; tenantId: string; name: string
-  layout: string; isDefault: boolean
-  createdBy?: string
-  createdAt?: string
+
+function parseExecution (e: any): ReportExecution {
+  const parsed: ReportExecution = { ...e, resultData: safeJsonParse<any[]>(e?.resultData) }
+  return parsed
 }
 
 export const useReportingStore = defineStore('reporting', () => {
@@ -34,16 +28,38 @@ export const useReportingStore = defineStore('reporting', () => {
   }
 
   async function createDefinition (data: Partial<ReportDefinition>) {
-    const d = await branchStore.$apiWithBranch('/reporting/reports/definitions', { method: 'POST', body: data })
+    const body: any = { ...data }
+    if (body.config != null && typeof body.config !== 'string') { body.config = JSON.stringify(body.config) }
+    if (body.layout != null && typeof body.layout !== 'string') { body.layout = JSON.stringify(body.layout) }
+    const d = await branchStore.$apiWithBranch('/reporting/reports/definitions', { method: 'POST', body })
     definitions.value.push(d)
     return d
   }
 
   async function executeReport (reportId: string, tenantId: string, parameters?: string, requestedBy?: string) {
-    return await branchStore.$apiWithBranch(`/reporting/reports/definitions/${reportId}/execute`, {
+    const e = await branchStore.$apiWithBranch(`/reporting/reports/definitions/${reportId}/execute`, {
       method: 'POST',
       body: { tenantId, parameters, requestedBy }
     })
+    const parsed = parseExecution(e)
+    const idx = executions.value.findIndex(ex => ex.id === parsed.id)
+    if (idx >= 0) { executions.value[idx] = parsed } else { executions.value.unshift(parsed) }
+    return parsed
+  }
+
+  async function fetchExecution (id: string) {
+    const e = await branchStore.$apiWithBranch(`/reporting/reports/executions/${id}`)
+    const parsed = parseExecution(e)
+    const idx = executions.value.findIndex(ex => ex.id === parsed.id)
+    if (idx >= 0) { executions.value[idx] = parsed } else { executions.value.unshift(parsed) }
+    return parsed
+  }
+
+  async function fetchExecutions (reportId: string) {
+    const res: any = await branchStore.$apiWithBranch(`/reporting/reports/executions/by-report/${reportId}`)
+    const list: ReportExecution[] = (Array.isArray(res) ? res : []).map(parseExecution)
+    executions.value = list
+    return list
   }
 
   async function fetchDashboards (tenantId: string) {
@@ -65,6 +81,8 @@ export const useReportingStore = defineStore('reporting', () => {
     fetchDefinitions,
     createDefinition,
     executeReport,
+    fetchExecution,
+    fetchExecutions,
     fetchDashboards,
     createDashboard
   }

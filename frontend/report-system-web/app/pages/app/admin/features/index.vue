@@ -56,7 +56,19 @@
               <p class="text-sm font-medium text-text-primary">
                 {{ f.name }}
               </p>
+              <button
+                v-if="can('features.write')"
+                :disabled="f.system || savingCode === f.code"
+                class="text-lg disabled:opacity-50"
+                @click="toggleFeature(f)"
+              >
+                <Icon
+                  :icon="f.enabled ? 'ant-design:check-circle-filled' : 'ant-design:minus-circle-outlined'"
+                  :class="f.enabled ? 'text-success' : 'text-text-disabled'"
+                />
+              </button>
               <Icon
+                v-else
                 :icon="f.enabled ? 'ant-design:check-circle-filled' : 'ant-design:minus-circle-outlined'"
                 :class="f.enabled ? 'text-success' : 'text-text-disabled'"
               />
@@ -85,9 +97,12 @@ import { useFeatureStore } from '~/stores/feature'
 definePageMeta({ middleware: 'auth' })
 
 const featureStore = useFeatureStore()
-const { user } = useAuth()
+const { user, token } = useAuth()
+const { can } = usePermission()
+const config = useRuntimeConfig()
 const list = useListPage({ pageSize: 100 })
 const expandedModules = ref<Set<string>>(new Set())
+const savingCode = ref<string | null>(null)
 
 const featureCount = computed(() => featureStore.tree.reduce((s, m) => s + m.features.length, 0))
 const enabledCount = computed(() => featureStore.tree.reduce((s, m) => s + m.features.filter((f: any) => f.enabled).length, 0))
@@ -137,7 +152,6 @@ async function load () {
   try {
     await featureStore.fetchFeatures()
     // Fetch the tree
-    const config = useRuntimeConfig()
     const headers: Record<string, string> = { 'X-Tenant-Id': user.value.tenantId }
     const tree: any = await $fetch(`${config.public.apiBaseUrl}/api/features/tree`, { headers })
     if (Array.isArray(tree)) {
@@ -159,6 +173,26 @@ async function load () {
     expandedModules.value = new Set(['system'])
   } finally {
     list.loading.value = false
+  }
+}
+
+async function toggleFeature (f: any) {
+  if (!user.value?.tenantId || savingCode.value) { return }
+  savingCode.value = f.code
+  const action = f.enabled ? 'disable' : 'enable'
+  try {
+    await $fetch(`${config.public.apiBaseUrl}/api/features/${f.code}/${action}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token.value}`,
+        'X-Tenant-Id': user.value.tenantId
+      }
+    })
+    await load()
+  } catch (e: any) {
+    alert(e?.data?.message || `Failed to ${action} feature`)
+  } finally {
+    savingCode.value = null
   }
 }
 
