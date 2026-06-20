@@ -12,8 +12,8 @@ import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.Duration;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,11 +22,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+import org.springframework.core.ParameterizedTypeReference;
 
 /**
  * OIDC token validator for Keycloak JWTs.
@@ -44,7 +48,7 @@ public class OidcTokenValidator implements WebFilter {
 
     private static final Logger log = LoggerFactory.getLogger(OidcTokenValidator.class);
     private static final List<String> PUBLIC_PATHS = List.of(
-        "/api/auth/login", "/api/auth/register", "/api/auth/refresh"
+        "/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/actuator"
     );
 
     private final String keycloakUrl;
@@ -52,6 +56,7 @@ public class OidcTokenValidator implements WebFilter {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, CachedJwks> jwksCache = new ConcurrentHashMap<>();
     private final JwtTokenProvider jwtTokenProvider;
+    private final WebClient webClient;
     private static final long JWKS_TTL_MS = 5 * 60 * 1000L;
 
     private final Map<String, CachedValidation> validationCache;
@@ -63,10 +68,12 @@ public class OidcTokenValidator implements WebFilter {
     public OidcTokenValidator(
         @Value("${keycloak.url:http://localhost:8180}") String keycloakUrl,
         @Value("${keycloak.realm-tenant-mapping:}") String mapping,
-        JwtTokenProvider jwtTokenProvider
+        JwtTokenProvider jwtTokenProvider,
+        WebClient webClient
     ) {
         this.keycloakUrl = keycloakUrl;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.webClient = webClient;
         this.realmTenantMapping = new java.util.Properties();
         if (mapping != null && !mapping.isBlank()) {
             for (String pair : mapping.split(",")) {
@@ -139,47 +146,11 @@ public class OidcTokenValidator implements WebFilter {
                 return validateLegacyToken(exchange, chain, token);
             }
 
-            PublicKey publicKey = getRealmPublicKey(realm, kid);
-            Jws<Claims> jws = Jwts.parser()
-                .verifyWith(publicKey)
-                .build()
-                .parseSignedClaims(token);
-
-            Claims claims = jws.getPayload();
-            String issuer = claims.getIssuer();
-            if (issuer == null || (!issuer.equals(keycloakUrl + "/realms/" + realm) && !issuer.endsWith("/realms/" + realm))) {
-                log.warn("Issuer mismatch: expected to end with /realms/{} but was {}", realm, issuer);
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
-            }
-
-            String tenantId = claims.get("tenantId", String.class);
-            if (tenantId == null || tenantId.isBlank()) {
-                tenantId = realmTenantMapping.getProperty(realm);
-            }
-            if (tenantId == null || tenantId.isBlank()) {
-                log.warn("Token has no tenantId claim and realm '{}' not in mapping", realm);
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
-            }
-
-            String branchId = claims.get("defaultBranchId", String.class);
-            // Allow ?branchId=X or X-Branch-Id header to override
-            String existingBranchId = exchange.getRequest().getHeaders().getFirst("X-Branch-Id");
-            String queryBranchId = exchange.getRequest().getQueryParams().getFirst("branchId");
-            if (existingBranchId != null && !existingBranchId.isBlank()) {
-                branchId = existingBranchId;
-            } else if (queryBranchId != null && !queryBranchId.isBlank()) {
-                branchId = queryBranchId;
-            }
-
-            // Cache validation result (token TTL)
-            long exp = claims.getExpiration() != null ? claims.getExpiration().getTime() : System.currentTimeMillis() + 3600_000L;
-            synchronized (validationCache) {
-                validationCache.put(cacheKey, new CachedValidation(claims, realm, tenantId, branchId, exp));
-            }
-
-            return setHeadersAndContinue(exchange, chain, claims, realm, tenantId, branchId);
+            return getRealmPublicKey(realm, kid)
+                .flatMap(publicKey -> validateOidcToken(exchange, chain, token, cacheKey, realm, publicKey))
+                .onErrorResume(JwtException.class, e -> jwtValidationFailed(exchange, e))
+                .onErrorResume(IllegalStateException.class, e -> jwtValidationFailed(exchange, e))
+                .onErrorResume(Exception.class, e -> tokenValidationError(exchange, e));
 
         } catch (JwtException e) {
             log.warn("JWT validation failed: {}", e.getMessage());
@@ -195,16 +166,56 @@ public class OidcTokenValidator implements WebFilter {
     private Mono<Void> setHeadersAndContinue(ServerWebExchange exchange, WebFilterChain chain,
                                               Claims claims, String realm, String tenantId, String branchId) {
         String userId = claims.getSubject();
-        exchange.getRequest().mutate()
-            .header("X-Tenant-Id", tenantId)
-            .header("X-User-Id", userId != null ? userId : "")
-            .header("X-Branch-Id", branchId != null ? branchId : "")
-            .header("X-Tenant-Slug", realm)
-            .header("X-User-Email", claims.get("email", String.class) != null ? claims.get("email", String.class) : "")
-            .header("X-User-Name", claims.get("name", String.class) != null ? claims.get("name", String.class) : "")
+        ServerWebExchange mutatedExchange = exchange.mutate()
+            .request(exchange.getRequest().mutate()
+                .header("X-Tenant-Id", tenantId)
+                .header("X-User-Id", userId != null ? userId : "")
+                .header("X-Branch-Id", branchId != null ? branchId : "")
+                .header("X-Tenant-Slug", realm)
+                .header("X-User-Email", claims.get("email", String.class) != null ? claims.get("email", String.class) : "")
+                .header("X-User-Name", claims.get("name", String.class) != null ? claims.get("name", String.class) : "")
+                .build())
             .build();
         log.debug("Authenticated user {} for tenant {} branch {} (realm {})", userId, tenantId, branchId, realm);
-        return chain.filter(exchange);
+        return chain.filter(mutatedExchange);
+    }
+
+    private Mono<Void> validateOidcToken(ServerWebExchange exchange, WebFilterChain chain,
+                                         String token, String cacheKey, String realm, PublicKey publicKey) {
+        Jws<Claims> jws = Jwts.parser()
+            .verifyWith(publicKey)
+            .build()
+            .parseSignedClaims(token);
+
+        Claims claims = jws.getPayload();
+        String issuer = claims.getIssuer();
+        if (issuer == null || (!issuer.equals(keycloakUrl + "/realms/" + realm) && !issuer.endsWith("/realms/" + realm))) {
+            throw new JwtException("Issuer mismatch: expected to end with /realms/" + realm + " but was " + issuer);
+        }
+
+        String tenantId = claims.get("tenantId", String.class);
+        if (tenantId == null || tenantId.isBlank()) {
+            tenantId = realmTenantMapping.getProperty(realm);
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new JwtException("Token has no tenantId claim and realm '" + realm + "' not in mapping");
+        }
+
+        String branchId = claims.get("defaultBranchId", String.class);
+        String existingBranchId = exchange.getRequest().getHeaders().getFirst("X-Branch-Id");
+        String queryBranchId = exchange.getRequest().getQueryParams().getFirst("branchId");
+        if (existingBranchId != null && !existingBranchId.isBlank()) {
+            branchId = existingBranchId;
+        } else if (queryBranchId != null && !queryBranchId.isBlank()) {
+            branchId = queryBranchId;
+        }
+
+        long exp = claims.getExpiration() != null ? claims.getExpiration().getTime() : System.currentTimeMillis() + 3600_000L;
+        synchronized (validationCache) {
+            validationCache.put(cacheKey, new CachedValidation(claims, realm, tenantId, branchId, exp));
+        }
+
+        return setHeadersAndContinue(exchange, chain, claims, realm, tenantId, branchId);
     }
 
     private Mono<Void> validateLegacyToken(ServerWebExchange exchange, WebFilterChain chain, String token) {
@@ -230,16 +241,18 @@ public class OidcTokenValidator implements WebFilter {
                 branchId = queryBranchId;
             }
 
-            exchange.getRequest().mutate()
-                .header("X-Tenant-Id", tenantId)
-                .header("X-User-Id", userId != null ? userId : "")
-                .header("X-Branch-Id", branchId)
-                .header("X-User-Email", email != null ? email : "")
-                .header("X-User-Name", email != null ? email : "")
+            ServerWebExchange mutatedExchange = exchange.mutate()
+                .request(exchange.getRequest().mutate()
+                    .header("X-Tenant-Id", tenantId)
+                    .header("X-User-Id", userId != null ? userId : "")
+                    .header("X-Branch-Id", branchId)
+                    .header("X-User-Email", email != null ? email : "")
+                    .header("X-User-Name", email != null ? email : "")
+                    .build())
                 .build();
 
             log.debug("Authenticated legacy user {} for tenant {}", userId, tenantId);
-            return chain.filter(exchange);
+            return chain.filter(mutatedExchange);
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("Legacy JWT validation failed: {}", e.getMessage());
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -287,52 +300,73 @@ public class OidcTokenValidator implements WebFilter {
     }
 
     @SuppressWarnings("unchecked")
-    private PublicKey getRealmPublicKey(String realm, String kid) throws Exception {
+    private Mono<PublicKey> getRealmPublicKey(String realm, String kid) {
         CachedJwks cached = jwksCache.get(realm);
         if (cached != null && !cached.isExpired() && cached.jwks().containsKey(kid)) {
-            return cached.jwks().get(kid);
+            return Mono.just(cached.jwks().get(kid));
         }
 
-        // Refresh JWKS
         String jwksUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/certs";
-        String response = httpGet(jwksUrl);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = objectMapper.readValue(response, Map.class);
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> keys = (List<Map<String, Object>>) body.get("keys");
+        return fetchJwks(jwksUrl)
+            .map(body -> {
+                List<Map<String, Object>> keys = (List<Map<String, Object>>) body.get("keys");
+                Map<String, PublicKey> newJwks = new ConcurrentHashMap<>();
+                if (keys != null) {
+                    for (Map<String, Object> key : keys) {
+                        String keyKid = (String) key.get("kid");
+                        String kty = (String) key.get("kty");
+                        if (!"RSA".equals(kty) || keyKid == null) continue;
+                        String n = (String) key.get("n");
+                        String e = (String) key.get("e");
+                        if (n == null || e == null) continue;
+                        BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(n));
+                        BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(e));
+                        RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
+                        PublicKey pk = KeyFactory.getInstance("RSA").generatePublic(spec);
+                        newJwks.put(keyKid, pk);
+                    }
+                }
 
-        Map<String, PublicKey> newJwks = new ConcurrentHashMap<>();
-        for (Map<String, Object> key : keys) {
-            String keyKid = (String) key.get("kid");
-            String kty = (String) key.get("kty");
-            if (!"RSA".equals(kty)) continue;
-            String n = (String) key.get("n");
-            String e = (String) key.get("e");
-            BigInteger modulus = new BigInteger(1, Base64.getUrlDecoder().decode(n));
-            BigInteger exponent = new BigInteger(1, Base64.getUrlDecoder().decode(e));
-            RSAPublicKeySpec spec = new RSAPublicKeySpec(modulus, exponent);
-            PublicKey pk = KeyFactory.getInstance("RSA").generatePublic(spec);
-            newJwks.put(keyKid, pk);
-        }
-
-        jwksCache.put(realm, new CachedJwks(newJwks, System.currentTimeMillis() + JWKS_TTL_MS));
-        if (!newJwks.containsKey(kid)) {
-            throw new IllegalStateException("kid not found in JWKS: " + kid);
-        }
-        return newJwks.get(kid);
+                jwksCache.put(realm, new CachedJwks(newJwks, System.currentTimeMillis() + JWKS_TTL_MS));
+                if (!newJwks.containsKey(kid)) {
+                    throw new IllegalStateException("kid not found in JWKS: " + kid);
+                }
+                return newJwks.get(kid);
+            });
     }
 
-    private String httpGet(String url) throws Exception {
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) java.net.URI.create(url).toURL().openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
-        try (java.io.InputStream is = conn.getInputStream()) {
-            return new String(is.readAllBytes());
+    private Mono<Map<String, Object>> fetchJwks(String url) {
+        return webClient.get()
+            .uri(url)
+            .retrieve()
+            .bodyToMono(new ParameterizedTypeReference<>() {})
+            .timeout(Duration.ofSeconds(5))
+            .retryWhen(Retry.backoff(2, Duration.ofMillis(200))
+                .maxBackoff(Duration.ofSeconds(1))
+                .filter(OidcTokenValidator::isRecoverableJwksFailure));
+    }
+
+    private static boolean isRecoverableJwksFailure(Throwable throwable) {
+        if (throwable instanceof WebClientResponseException responseException) {
+            HttpStatusCode status = responseException.getStatusCode();
+            return status.is5xxServerError() || status.value() == 429;
         }
+        return true;
     }
 
     private record CachedJwks(Map<String, PublicKey> jwks, long expiresAt) {
         boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
+    }
+
+    private Mono<Void> jwtValidationFailed(ServerWebExchange exchange, Throwable throwable) {
+        log.warn("JWT validation failed: {}", throwable.getMessage(), throwable);
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        return exchange.getResponse().setComplete();
+    }
+
+    private Mono<Void> tokenValidationError(ServerWebExchange exchange, Throwable throwable) {
+        log.error("Token validation error: {}", throwable.getMessage(), throwable);
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        return exchange.getResponse().setComplete();
     }
 }

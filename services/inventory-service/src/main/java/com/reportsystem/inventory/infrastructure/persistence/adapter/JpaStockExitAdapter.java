@@ -23,5 +23,8 @@ public class JpaStockExitAdapter implements StockExitRepository {
         return (warehouseId != null ? repo.findByProductIdAndWarehouseId(productId, warehouseId) : repo.findByProductIdAndWarehouseId(productId, null))
                 .stream().map(this::toDomain).toList();
     }
+    @Override public List<StockExit> findByTenantIdAndBranchIdAndProductId(UUID tenantId, UUID branchId, UUID productId) {
+        return repo.findByTenantIdAndBranchIdAndProductId(tenantId, branchId, productId).stream().map(this::toDomain).toList();
+    }
     private StockExit toDomain(StockExitEntity e) { return StockExit.builder().id(e.getId()).tenantId(e.getTenantId()).branchId(e.getBranchId()).warehouseId(e.getWarehouseId()).productId(e.getProductId()).quantity(e.getQuantity()).referenceType(e.getReferenceType()).referenceId(e.getReferenceId()).notes(e.getNotes()).createdBy(e.getCreatedBy()).createdAt(e.getCreatedAt()).build(); }
 }

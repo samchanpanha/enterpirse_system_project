@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: report_system
     volumes:
       - postgres-data-prod:/var/lib/postgresql/data
+      - ./docker/scripts/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
     deploy:
       resources:
         limits:
@@ -17,6 +18,48 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres-keycloak:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: report_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-report_pass}
+      POSTGRES_DB: keycloak_db
+    volumes:
+      - keycloak-pg-data-prod:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U report_user -d keycloak_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    command: ["start-dev", "--import-realm", "--http-enabled=true", "--hostname-strict=false"]
+    ports:
+      - "8180:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloak_db
+      KC_DB_USERNAME: report_user
+      KC_DB_PASSWORD: ${DB_PASSWORD:-report_pass}
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+    volumes:
+      - ./docker/keycloak/realm:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -93,6 +136,10 @@ services:
     depends_on:
       eureka:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
@@ -122,6 +169,8 @@ services:
       postgres:
         condition: service_healthy
       eureka:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -293,7 +342,14 @@ services:
       - NUXT_PUBLIC_KEYCLOAK_REALM=demo-corp
       - NUXT_PUBLIC_KEYCLOAK_CLIENT_ID=report-system-web
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'node server/index.mjs' > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   postgres-data-prod:
+  keycloak-pg-data-prod:
   minio-data-prod:

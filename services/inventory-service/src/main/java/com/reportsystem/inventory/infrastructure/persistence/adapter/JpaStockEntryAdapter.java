@@ -24,5 +24,8 @@ public class JpaStockEntryAdapter implements StockEntryRepository {
         return (warehouseId != null ? repo.findByProductIdAndWarehouseId(productId, warehouseId) : repo.findByProductIdAndWarehouseId(productId, null))
                 .stream().map(this::toDomain).toList();
     }
+    @Override public List<StockEntry> findByTenantIdAndBranchIdAndProductId(UUID tenantId, UUID branchId, UUID productId) {
+        return repo.findByTenantIdAndBranchIdAndProductId(tenantId, branchId, productId).stream().map(this::toDomain).toList();
+    }
     private StockEntry toDomain(StockEntryEntity e) { return StockEntry.builder().id(e.getId()).tenantId(e.getTenantId()).branchId(e.getBranchId()).warehouseId(e.getWarehouseId()).productId(e.getProductId()).quantity(e.getQuantity()).unitCost(e.getUnitCost()).batchNumber(e.getBatchNumber()).expiryDate(e.getExpiryDate()).referenceType(e.getReferenceType()).referenceId(e.getReferenceId()).notes(e.getNotes()).createdBy(e.getCreatedBy()).createdAt(e.getCreatedAt()).build(); }
 }

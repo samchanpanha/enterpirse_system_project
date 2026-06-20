@@ -35,7 +35,8 @@ public class StockController {
                 b.get("referenceId") != null ? UUID.fromString((String)b.get("referenceId")) : null,
                 (String)b.get("notes")));
     }
-    @GetMapping("/current/{tenantId}/{productId}") public ResponseEntity<Map<String, Object>> getStock(@PathVariable UUID tenantId, @PathVariable UUID productId) {
-        return ResponseEntity.ok(Map.of("productId", productId, "quantity", stockService.getCurrentStock(tenantId, productId)));
+    @GetMapping("/current/{tenantId}/{productId}") public ResponseEntity<Map<String, Object>> getStock(@RequestHeader(value = "X-Branch-Id", required = false) String branchId, @PathVariable UUID tenantId, @PathVariable UUID productId) {
+        UUID bid = branchId != null && !branchId.isBlank() ? UUID.fromString(branchId) : null;
+        return ResponseEntity.ok(Map.of("productId", productId, "quantity", stockService.getCurrentStock(tenantId, bid, productId)));
     }
 }

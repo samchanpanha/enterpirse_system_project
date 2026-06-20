@@ -28,11 +28,11 @@ public class StockServiceImpl implements StockService {
                 .productId(productId).quantity(quantity).referenceType(referenceType).referenceId(referenceId)
                 .notes(notes).createdAt(Instant.now()).build());
     }
-    @Override public BigDecimal getCurrentStock(UUID tenantId, UUID productId) {
-        BigDecimal in = entryRepo.findByProductIdAndWarehouseId(productId, null).stream()
-                .map(StockEntry::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal out = exitRepo.findByProductIdAndWarehouseId(productId, null).stream()
-                .map(StockExit::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+    @Override public java.math.BigDecimal getCurrentStock(UUID tenantId, UUID branchId, UUID productId) {
+        java.math.BigDecimal in = entryRepo.findByTenantIdAndBranchIdAndProductId(tenantId, branchId, productId).stream()
+                .map(StockEntry::getQuantity).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        java.math.BigDecimal out = exitRepo.findByTenantIdAndBranchIdAndProductId(tenantId, branchId, productId).stream()
+                .map(StockExit::getQuantity).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         return in.subtract(out);
     }
 }

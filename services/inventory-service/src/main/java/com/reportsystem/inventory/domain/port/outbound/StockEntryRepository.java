@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface StockEntryRepository {
     StockEntry save(StockEntry e);
     List<StockEntry> findByProductIdAndWarehouseId(UUID productId, UUID warehouseId);
+    List<StockEntry> findByTenantIdAndBranchIdAndProductId(UUID tenantId, UUID branchId, UUID productId);
 }

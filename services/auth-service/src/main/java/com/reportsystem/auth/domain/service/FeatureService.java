@@ -78,9 +78,39 @@ public class FeatureService {
     }
 
     public Map<String, Boolean> enabledFeaturesFor(UUID tenantId) {
+        var tenantOpt = tenantRepo.findById(tenantId);
+        if (tenantOpt.isEmpty()) {
+            return Map.of();
+        }
+        var tenant = tenantOpt.get();
+        int tenantTier = getTierRank(tenant.getTier());
+
+        List<Feature> allFeatures = featureRepo.findAll();
+        List<ClientFeature> clientFeatures = clientFeatureRepo.findByTenant(tenantId);
+        Map<String, ClientFeature> cfMap = clientFeatures.stream()
+                .collect(Collectors.toMap(ClientFeature::getFeatureCode, cf -> cf));
+
         Map<String, Boolean> result = new HashMap<>();
-        for (Feature f : featureRepo.findAll()) {
-            result.put(f.getCode(), isEnabled(tenantId, f.getCode()));
+        for (Feature f : allFeatures) {
+            if (f.isDeprecated()) {
+                result.put(f.getCode(), false);
+                continue;
+            }
+            if (!tierMeets(tenantTier, getTierRank(f.getTierRequired()))) {
+                result.put(f.getCode(), false);
+                continue;
+            }
+
+            ClientFeature cf = cfMap.get(f.getCode());
+            if (cf != null) {
+                if (cf.getExpiresAt() != null && cf.getExpiresAt().isBefore(Instant.now())) {
+                    result.put(f.getCode(), false);
+                } else {
+                    result.put(f.getCode(), cf.isEnabled());
+                }
+            } else {
+                result.put(f.getCode(), true);
+            }
         }
         return result;
     }
@@ -90,10 +120,21 @@ public class FeatureService {
     }
 
     public List<Map<String, Object>> featureTreeFor(UUID tenantId) {
-        List<Feature> all = featureRepo.findAll();
+        var tenantOpt = tenantRepo.findById(tenantId);
+        if (tenantOpt.isEmpty()) {
+            return List.of();
+        }
+        var tenant = tenantOpt.get();
+        int tenantTier = getTierRank(tenant.getTier());
+
+        List<Feature> allFeatures = featureRepo.findAll();
         Set<String> enabled = clientFeatureRepo.findEnabledCodesByTenant(tenantId);
+        List<ClientFeature> clientFeatures = clientFeatureRepo.findByTenant(tenantId);
+        Map<String, ClientFeature> cfMap = clientFeatures.stream()
+                .collect(Collectors.toMap(ClientFeature::getFeatureCode, cf -> cf));
+
         Map<String, List<Feature>> byModule = new HashMap<>();
-        for (Feature f : all) {
+        for (Feature f : allFeatures) {
             byModule.computeIfAbsent(f.getModule(), k -> new ArrayList<>()).add(f);
         }
         List<Map<String, Object>> tree = new ArrayList<>();
@@ -106,7 +147,27 @@ public class FeatureService {
                 node.put("name", f.getName());
                 node.put("description", f.getDescription());
                 node.put("tierRequired", f.getTierRequired());
-                node.put("enabled", isEnabled(tenantId, f.getCode()));
+
+                // Calculate enabled flag with single-pass logic (no more DB calls)
+                boolean isEnabled;
+                if (f.isDeprecated()) {
+                    isEnabled = false;
+                } else if (!tierMeets(tenantTier, getTierRank(f.getTierRequired()))) {
+                    isEnabled = false;
+                } else {
+                    ClientFeature cf = cfMap.get(f.getCode());
+                    if (cf != null) {
+                        if (cf.getExpiresAt() != null && cf.getExpiresAt().isBefore(Instant.now())) {
+                            isEnabled = false;
+                        } else {
+                            isEnabled = cf.isEnabled();
+                        }
+                    } else {
+                        isEnabled = true;
+                    }
+                }
+
+                node.put("enabled", isEnabled);
                 node.put("explicitlyEnabled", enabled.contains(f.getCode()));
                 return node;
             }).toList());

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.idea
+*.iml
+**/node_modules
+**/.output
+**/.nuxt
+**/target/classes
+**/target/test-classes
+**/target/maven-*
+**/target/surefire-reports
+**/src
+**/test
+docker/keycloak
+docker/scripts
+*.md
+.env*

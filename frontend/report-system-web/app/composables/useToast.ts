@@ -8,31 +8,33 @@ export interface Toast {
   duration: number
 }
 
-const toasts = useState<Toast[]>('app.toasts', () => [])
+export const useToast = () => {
+  const toasts = useState<Toast[]>('app.toasts', () => [])
 
-function push (type: ToastType, title: string, message?: string, duration = 4000) {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  toasts.value = [...toasts.value, { id, type, title, message, duration }]
-  if (duration > 0 && import.meta.client) {
-    setTimeout(() => dismiss(id), duration)
+  function push (type: ToastType, title: string, message?: string, duration = 4000) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    toasts.value = [...toasts.value, { id, type, title, message, duration }]
+    if (duration > 0 && import.meta.client) {
+      setTimeout(() => dismiss(id), duration)
+    }
+    return id
   }
-  return id
-}
 
-function dismiss (id: string) {
-  toasts.value = toasts.value.filter(t => t.id !== id)
-}
+  function dismiss (id: string) {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }
 
-function clear () {
-  toasts.value = []
-}
+  function clear () {
+    toasts.value = []
+  }
 
-export const useToast = () => ({
-  toasts: readonly(toasts),
-  success: (title: string, message?: string) => push('success', title, message),
-  error: (title: string, message?: string) => push('error', title, message, 6000),
-  warning: (title: string, message?: string) => push('warning', title, message),
-  info: (title: string, message?: string) => push('info', title, message),
-  dismiss,
-  clear
-})
+  return {
+    toasts: readonly(toasts),
+    success: (title: string, message?: string) => push('success', title, message),
+    error: (title: string, message?: string) => push('error', title, message, 6000),
+    warning: (title: string, message?: string) => push('warning', title, message),
+    info: (title: string, message?: string) => push('info', title, message),
+    dismiss,
+    clear
+  }
+}
