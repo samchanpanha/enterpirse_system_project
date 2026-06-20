@@ -64,6 +64,13 @@
         <p class="text-xs text-text-disabled text-center">
           Legacy login is deprecated. Prefer Keycloak SSO.
         </p>
+        <div class="mt-4 p-3 bg-primary-light rounded text-xs text-text-secondary">
+          <p class="font-medium text-text-primary mb-1">
+            Demo credentials
+          </p>
+          <p>Email: <code class="text-primary">admin@demo.com</code></p>
+          <p>Password: <code class="text-primary">Demo123!</code></p>
+        </div>
       </form>
 
       <p class="mt-5 text-center text-sm text-text-secondary">
@@ -77,8 +84,9 @@
 </template>
 
 <script setup lang="ts">
-const { login, loginWithKeycloak } = useAuth()
+const { login, loginWithKeycloak, afterLogin } = useAuth()
 const router = useRouter()
+const toast = useToast()
 
 const email = ref('')
 const password = ref('')
@@ -90,6 +98,8 @@ const handleLogin = async () => {
   loading.value = true
   try {
     await login(email.value, password.value)
+    await afterLogin()
+    toast.success('Welcome back', 'Redirecting to dashboard…')
     router.push('/app/dashboard')
   } catch (e: any) {
     error.value = e?.response?.data?.message || 'Login failed'

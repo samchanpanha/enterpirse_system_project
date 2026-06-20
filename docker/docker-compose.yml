@@ -10,7 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./docker/scripts/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
+      - docker/scripts/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U report_user -d report_system"]
       interval: 10s
@@ -34,7 +34,7 @@ services:
     ports:
       - "9092:9092"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -111,7 +111,7 @@ services:
       KC_HEALTH_ENABLED: "true"
       JAVA_OPTS: "-Xms512m -Xmx1024m"
     volumes:
-      - ./docker/keycloak/realm:/opt/keycloak/data/import:ro
+      - docker/keycloak/realm:/opt/keycloak/data/import:ro
     depends_on:
       postgres-keycloak:
         condition: service_healthy
@@ -297,7 +297,7 @@ services:
 
   nuxt-web:
     build:
-      context: frontend/report-system-web
+      context: ./frontend/report-system-web
       dockerfile: Dockerfile
     container_name: report-web
     ports:

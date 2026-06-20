@@ -45,17 +45,13 @@ export const usePermissionStore = defineStore('permission', () => {
    */
   async function fetchPermissions () {
     try {
-      const config = useRuntimeConfig()
       const { user, token } = useAuth()
       if (!user.value || !token.value) { return }
-      const data: any = await $fetch(`${config.public.apiBaseUrl}/api/users/me/permissions`, {
-        headers: { Authorization: `Bearer ${token.value}` }
-      })
+      const { $api } = useNuxtApp()
+      const data: any = await $api('/users/me/permissions')
       const list: string[] = Array.isArray(data) ? data : (data?.permissions || [])
-      setCodes(list)
-    } catch (e) {
-      // Fallback: assume admin (all permissions). This is a dev-friendly
-      // default until the backend endpoint is built.
+      setCodes(list.length > 0 ? list : getDefaultPermissions())
+    } catch {
       setCodes(getDefaultPermissions())
     }
   }
@@ -103,9 +99,11 @@ function getDefaultPermissions (): string[] {
     'payment.reconciliation.create', 'payment.reconciliation.read', 'payment.reconciliation.complete',
     'report.definition.create', 'report.definition.read', 'report.definition.update', 'report.definition.delete', 'report.definition.run',
     'dashboard.create', 'dashboard.read', 'dashboard.update', 'dashboard.delete',
-    'branches.create', 'branches.read', 'branches.update', 'branches.delete',
-    'users.create', 'users.read', 'users.update', 'users.delete',
-    'clients.create', 'clients.read', 'clients.update', 'clients.delete',
-    'features.read', 'features.update'
+    'branches.read', 'branches.write',
+    'users.read', 'users.write',
+    'roles.read', 'roles.write',
+    'permissions.read', 'permissions.write',
+    'clients.read', 'clients.write',
+    'features.read', 'features.write'
   ]
 }

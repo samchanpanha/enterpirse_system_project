@@ -15,11 +15,20 @@ export default defineNuxtPlugin(() => {
         options.headers.set('Authorization', `Bearer ${token.value}`)
       }
     },
-    onResponseError ({ response }) {
+    onResponseError ({ response, options }) {
       if (response.status === 401) {
         const { logout } = useAuth()
         logout()
         navigateTo('/login')
+        return
+      }
+      const method = (options.method || 'GET').toUpperCase()
+      const showToast = method !== 'GET' && method !== 'HEAD'
+      if (import.meta.client && showToast && response.status >= 400) {
+        const toast = useToast()
+        const data = response._data as { message?: string; error?: string } | undefined
+        const detail = data?.message || data?.error || `Request failed (${response.status})`
+        toast.error('Action failed', detail)
       }
     }
   }) as Api
