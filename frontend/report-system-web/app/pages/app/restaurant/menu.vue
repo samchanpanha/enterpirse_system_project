@@ -348,7 +348,7 @@ async function saveCategory (data: any) {
   try {
     const body = { tenantId: user.value!.tenantId, outletId: selectedOutletId.value, ...data }
     if (categoryDrawer.isEdit() && categoryDrawer.editing.value) {
-      // TODO: update
+      await store.updateCategory(categoryDrawer.editing.value.id, { name: data.name, sortOrder: data.displayOrder })
     } else {
       await store.createCategory(body as any)
     }
@@ -379,7 +379,7 @@ async function saveItem (data: any) {
   try {
     const body = { tenantId: user.value!.tenantId, outletId: selectedOutletId.value, ...data }
     if (itemDrawer.isEdit() && itemDrawer.editing.value) {
-      // TODO: update
+      await store.updateMenuItem(itemDrawer.editing.value.id, { name: data.name, price: data.price, active: data.active })
     } else {
       await store.createMenuItem(body as any)
     }
@@ -395,8 +395,8 @@ async function saveItem (data: any) {
 async function delItem (i: MenuItem) {
   if (!confirm(`Delete "${i.name}"?`)) { return }
   try {
-    // TODO: wire delete endpoint
-    await loadMenu()
+    await store.deleteMenuItem(i.id)
+    loadMenu()
   } catch (e: any) {
     alert(e?.data?.message || 'Failed to delete item')
   }

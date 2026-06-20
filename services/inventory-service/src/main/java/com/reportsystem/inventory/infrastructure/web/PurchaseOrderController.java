@@ -38,4 +38,7 @@ public class PurchaseOrderController {
     @PostMapping("/{id}/receive") public ResponseEntity<PurchaseOrder> receive(@PathVariable UUID id) {
         return ResponseEntity.ok(poService.receiveItems(id));
     }
+    @PostMapping("/{id}/cancel") public ResponseEntity<PurchaseOrder> cancel(@PathVariable UUID id) {
+        return ResponseEntity.ok(poService.cancelPO(id));
+    }
 }

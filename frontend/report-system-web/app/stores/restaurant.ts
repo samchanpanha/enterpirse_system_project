@@ -42,6 +42,16 @@ export const useRestaurantStore = defineStore('restaurant', () => {
     categories.value.push(c)
     return c
   }
+  async function updateCategory (id: string, data: Partial<Category>) {
+    const c = await branchStore.$apiWithBranch<Category>(`/restaurant/menu/categories/${id}`, { method: 'PUT', body: data })
+    const idx = categories.value.findIndex(x => x.id === id)
+    if (idx >= 0) { categories.value[idx] = c }
+    return c
+  }
+  async function deleteCategory (id: string) {
+    await branchStore.$apiWithBranch(`/restaurant/menu/categories/${id}`, { method: 'DELETE' })
+    categories.value = categories.value.filter(c => c.id !== id)
+  }
 
   async function fetchMenuItems (tenantId: string) {
     loading.value = true
@@ -108,6 +118,12 @@ export const useRestaurantStore = defineStore('restaurant', () => {
     customers.value.push(c)
     return c
   }
+  async function updateCustomer (id: string, data: Partial<Customer>) {
+    const c = await branchStore.$apiWithBranch<Customer>(`/restaurant/customers/${id}`, { method: 'PUT', body: data })
+    const idx = customers.value.findIndex(x => x.id === id)
+    if (idx >= 0) { customers.value[idx] = c }
+    return c
+  }
 
   async function fetchReservations (outletId: string, date?: string) {
     loading.value = true
@@ -149,6 +165,8 @@ export const useRestaurantStore = defineStore('restaurant', () => {
     fetchTables,
     fetchCategories,
     createCategory,
+    updateCategory,
+    deleteCategory,
     fetchMenuItems,
     fetchItemsByCategory,
     createMenuItem,
@@ -164,6 +182,7 @@ export const useRestaurantStore = defineStore('restaurant', () => {
     fetchOrderItems,
     fetchCustomers,
     createCustomer,
+    updateCustomer,
     fetchReservations,
     createReservation,
     updateReservationStatus,

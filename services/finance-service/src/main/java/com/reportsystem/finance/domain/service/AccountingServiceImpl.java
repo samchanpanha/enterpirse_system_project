@@ -25,6 +25,14 @@ public class AccountingServiceImpl implements AccountingService {
     @Override public Optional<Account> getAccountById(UUID id) { return accountRepo.findById(id); }
     @Override public List<Account> getAccountsByTenant(UUID tenantId) { return accountRepo.findByTenantId(tenantId); }
     @Override public List<Account> getAccountsByTenantAndBranch(UUID tenantId, UUID branchId) { return accountRepo.findByTenantIdAndBranchId(tenantId, branchId); }
+    @Override public Account updateAccount(UUID id, String code, String name, String type, boolean active) {
+        Account existing = accountRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Account not found: " + id));
+        Account updated = Account.builder().id(existing.getId()).tenantId(existing.getTenantId()).branchId(existing.getBranchId())
+                .code(code != null ? code : existing.getCode()).name(name != null ? name : existing.getName())
+                .type(type != null ? type : existing.getType()).active(active).contra(existing.isContra())
+                .parentId(existing.getParentId()).createdAt(existing.getCreatedAt()).updatedAt(Instant.now()).build();
+        return accountRepo.save(updated);
+    }
 
     @Override public JournalEntry postJournalEntry(UUID tenantId, UUID branchId, LocalDate entryDate, String description, String referenceType, UUID referenceId, UUID createdBy, List<JournalEntryLine> lines) {
         BigDecimal totalDebit = lines.stream().map(JournalEntryLine::getDebit).reduce(BigDecimal.ZERO, BigDecimal::add);

@@ -41,4 +41,9 @@ public class CustomerController {
     public ResponseEntity<List<Customer>> getByOutlet(@PathVariable UUID outletId) {
         return ResponseEntity.ok(customerService.getCustomersByOutlet(outletId));
     }
+    @PutMapping("/{id}") public ResponseEntity<Customer> update(@PathVariable UUID id, @RequestBody Map<String, Object> b) {
+        return ResponseEntity.ok(customerService.updateCustomer(id,
+                (String)b.get("name"), (String)b.get("phone"), (String)b.get("email"),
+                b.getOrDefault("vip", false) instanceof Boolean ? (Boolean)b.get("vip") : false));
+    }
 }

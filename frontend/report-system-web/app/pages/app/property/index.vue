@@ -105,6 +105,20 @@
         >
           View
         </NuxtLink>
+        <button
+          v-if="can('property.update')"
+          class="text-sm text-text-secondary hover:text-primary px-2 py-0.5"
+          @click="openEdit(row)"
+        >
+          Edit
+        </button>
+        <button
+          v-if="can('property.delete')"
+          class="text-sm text-danger hover:opacity-80 px-2 py-0.5"
+          @click="del(row)"
+        >
+          Delete
+        </button>
       </template>
     </AdminTable>
 
@@ -278,14 +292,10 @@ async function save (data: any) {
   drawer.saving.value = true
   drawer.error.value = null
   try {
-    const body = {
-      tenantId: user.value!.tenantId,
-      ...data
-    }
     if (drawer.isEdit() && drawer.editing.value) {
-      // TODO: wire update endpoint
+      await store.updateProperty(drawer.editing.value.id, { ...data, tenantId: user.value!.tenantId })
     } else {
-      await store.createProperty(body as any)
+      await store.createProperty({ ...data, tenantId: user.value!.tenantId })
     }
     await loadProperties()
     drawer.close()
@@ -293,6 +303,28 @@ async function save (data: any) {
     drawer.error.value = e?.data?.message || 'Failed to save property'
   } finally {
     drawer.saving.value = false
+  }
+}
+
+async function del (p: Property) {
+  if (!confirm(`Delete "${p.name}"?`)) { return }
+  try {
+    await store.deleteProperty(p.id)
+  } catch (e: any) {
+    alert(e?.data?.message || 'Failed to delete property')
+  }
+}
+
+function openEdit (p: Property) {
+  drawer.openFor(p)
+  drawer.formData.value = {
+    name: p.name,
+    type: p.type,
+    address: p.address,
+    city: p.city,
+    district: p.district,
+    status: p.status,
+    totalUnits: p.totalUnits
   }
 }
 

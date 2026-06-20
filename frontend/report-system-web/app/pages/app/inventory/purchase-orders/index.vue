@@ -284,10 +284,10 @@ async function handleReceive (id: string) {
   }
 }
 
-async function handleCancel (_id: string) {
+async function handleCancel (id: string) {
   if (!confirm('Cancel this PO?')) { return }
   try {
-    // TODO: cancel endpoint
+    await store.cancelPurchaseOrder(id)
     await load()
   } catch (e: any) {
     alert(e?.data?.message || 'Failed to cancel PO')

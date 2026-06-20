@@ -20,4 +20,14 @@ public class SupplierServiceImpl implements SupplierService {
     @Override public Optional<Supplier> getSupplierById(UUID id) { return supplierRepo.findById(id); }
     @Override public List<Supplier> getSuppliersByTenant(UUID tenantId) { return supplierRepo.findByTenantId(tenantId); }
     @Override public List<Supplier> getSuppliersByTenantAndBranch(UUID tenantId, UUID branchId) { return supplierRepo.findByTenantIdAndBranchId(tenantId, branchId); }
+    @Override public Supplier updateSupplier(UUID id, String name, String phone, boolean active) {
+        Supplier existing = supplierRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Supplier not found: " + id));
+        Supplier updated = Supplier.builder().id(existing.getId()).tenantId(existing.getTenantId()).branchId(existing.getBranchId())
+                .name(name != null ? name : existing.getName()).contactPerson(existing.getContactPerson())
+                .phone(phone != null ? phone : existing.getPhone()).email(existing.getEmail()).address(existing.getAddress())
+                .taxNumber(existing.getTaxNumber()).paymentTerms(existing.getPaymentTerms()).currency(existing.getCurrency())
+                .active(active).notes(existing.getNotes()).createdAt(existing.getCreatedAt()).updatedAt(Instant.now()).build();
+        return supplierRepo.save(updated);
+    }
+    @Override public void deleteSupplier(UUID id) { supplierRepo.deleteById(id); }
 }

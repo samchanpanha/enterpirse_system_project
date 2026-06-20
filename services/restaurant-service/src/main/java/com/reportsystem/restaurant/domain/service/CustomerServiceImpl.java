@@ -55,4 +55,21 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
         return customerRepository.save(updated);
     }
+
+    @Override
+    public Customer updateCustomer(UUID id, String name, String phone, String email, boolean vip) {
+        Customer existing = customerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + id));
+        Customer updated = Customer.builder()
+                .id(existing.getId()).tenantId(existing.getTenantId()).outletId(existing.getOutletId())
+                .name(name != null ? name : existing.getName())
+                .phone(phone != null ? phone : existing.getPhone())
+                .email(email != null ? email : existing.getEmail())
+                .birthday(existing.getBirthday()).vip(vip).notes(existing.getNotes())
+                .totalVisits(existing.getTotalVisits()).totalSpent(existing.getTotalSpent())
+                .lastVisitAt(existing.getLastVisitAt())
+                .createdAt(existing.getCreatedAt()).updatedAt(Instant.now())
+                .build();
+        return customerRepository.save(updated);
+    }
 }

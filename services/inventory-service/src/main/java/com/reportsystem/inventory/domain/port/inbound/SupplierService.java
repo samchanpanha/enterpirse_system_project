@@ -10,4 +10,6 @@ public interface SupplierService {
     Optional<Supplier> getSupplierById(UUID id);
     List<Supplier> getSuppliersByTenant(UUID tenantId);
     List<Supplier> getSuppliersByTenantAndBranch(UUID tenantId, UUID branchId);
+    Supplier updateSupplier(UUID id, String name, String phone, boolean active);
+    void deleteSupplier(UUID id);
 }

@@ -21,6 +21,12 @@ export const useFinanceStore = defineStore('finance', () => {
     accounts.value.push(a)
     return a
   }
+  async function updateAccount (id: string, data: Partial<Account>) {
+    const a = await branchStore.$apiWithBranch<Account>(`/finance/accounts/${id}`, { method: 'PUT', body: data })
+    const idx = accounts.value.findIndex(x => x.id === id)
+    if (idx >= 0) { accounts.value[idx] = a }
+    return a
+  }
 
   async function fetchJournalEntries (tenantId: string) {
     loading.value = true
@@ -88,6 +94,7 @@ export const useFinanceStore = defineStore('finance', () => {
     loading,
     fetchAccounts,
     createAccount,
+    updateAccount,
     fetchJournalEntries,
     createJournalEntry,
     fetchInvoices,

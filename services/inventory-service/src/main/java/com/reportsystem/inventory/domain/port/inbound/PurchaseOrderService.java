@@ -12,4 +12,5 @@ public interface PurchaseOrderService {
     List<PurchaseOrder> getPOsByTenantAndBranch(UUID tenantId, UUID branchId);
     PurchaseOrder addItem(UUID poId, UUID productId, java.math.BigDecimal qty, java.math.BigDecimal unitCost);
     PurchaseOrder receiveItems(UUID poId);
+    PurchaseOrder cancelPO(UUID id);
 }

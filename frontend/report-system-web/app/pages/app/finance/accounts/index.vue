@@ -68,24 +68,97 @@
       <template #cell-balance="{ value }">
         <span class="font-medium text-text-primary">${{ Number(value).toFixed(2) }}</span>
       </template>
+      <template #actions="{ row }">
+        <button
+          v-if="can('finance.account.update')"
+          class="text-sm text-text-secondary hover:text-primary px-2 py-0.5"
+          @click="openEdit(row)"
+        >
+          Edit
+        </button>
+      </template>
     </AdminTable>
+
+    <AdminDrawer
+      v-model="drawer.open.value"
+      :title="drawer.isEdit() ? 'Edit Account' : 'New Account'"
+      :subtitle="drawer.isEdit() ? `Editing ${drawer.editing.value?.name}` : 'Add a new account'"
+      width="sm"
+    >
+      <AdminForm
+        v-if="drawer.open.value"
+        v-model="formData"
+        :groups="formGroups"
+        @submit="submitForm"
+      />
+      <p
+        v-if="drawer.error.value"
+        class="mt-3 text-sm text-danger flex items-center gap-1 bg-danger-light p-2 rounded"
+      >
+        <Icon icon="ant-design:exclamation-circle-outlined" />
+        {{ drawer.error.value }}
+      </p>
+      <template #footer>
+        <button class="px-3 py-1.5 text-sm border border-border rounded text-text-primary hover:bg-gray-50" @click="drawer.close()">
+          Cancel
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 inline-flex items-center gap-1.5"
+          :disabled="drawer.saving.value"
+          @click="submitForm"
+        >
+          <Icon v-if="drawer.saving.value" icon="ant-design:loading-outlined" class="animate-spin" />
+          {{ drawer.saving.value ? 'Saving…' : (drawer.isEdit() ? 'Update' : 'Create') }}
+        </button>
+      </template>
+    </AdminDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Account } from '~/shared/types/finance'
+import type { FormGroup } from '~/shared/types/form'
 import type { ColumnDef } from '~/components/admin/AdminTable.vue'
+import { useFormSchema } from '~/composables/useFormSchema'
 
 definePageMeta({ middleware: 'auth' })
 
 const store = useFinanceStore()
 const { can } = usePermission()
 const { user } = useAuth()
+const { text, select, group, opt } = useFormSchema()
 
 const list = useListPage<Account>({
   pageSize: 25,
   initialFilters: { type: '' }
 })
+
+const drawer = useDrawer<Account>()
+
+const formData = computed({
+  get: () => drawer.formData.value,
+  set: (val) => { drawer.formData.value = val }
+})
+
+const formGroups = computed<FormGroup[]>(() => [
+  group('Identity', [
+    text('code', 'Code', { required: true, placeholder: '1000', span: 6 }),
+    text('name', 'Name', { required: true, placeholder: 'Cash on Hand', span: 6 })
+  ]),
+  group('Classification', [
+    select('type', 'Type', [
+      opt('ASSET', 'Asset'),
+      opt('LIABILITY', 'Liability'),
+      opt('EQUITY', 'Equity'),
+      opt('REVENUE', 'Revenue'),
+      opt('EXPENSE', 'Expense')
+    ], { required: true, span: 6 }),
+    select('parentId', 'Parent account', [
+      opt('', '(None)'),
+      ...(store.accounts.filter(a => !a.parentId).map(a => opt(a.id, `${a.code} – ${a.name}`)) || [])
+    ], { span: 6 })
+  ])
+])
 
 const columns: ColumnDef[] = [
   { key: 'code', title: 'Code', width: '120px' },
@@ -118,7 +191,15 @@ function typeClass (t: string): string {
   }
 }
 
-function openCreate () { /* TODO */ }
+function openCreate () {
+  drawer.openFor(null)
+  drawer.formData.value = { code: '', name: '', type: '', parentId: '', active: true }
+}
+
+function openEdit (a: Account) {
+  drawer.openFor(a)
+  drawer.formData.value = { code: a.code, name: a.name, type: a.type, parentId: a.parentId || '', active: a.active }
+}
 
 async function load () {
   if (!user.value?.tenantId) { return }
@@ -127,6 +208,26 @@ async function load () {
     await store.fetchAccounts(user.value.tenantId)
     list.setItems(store.accounts || [], (store.accounts || []).length)
   } finally { list.loading.value = false }
+}
+
+async function submitForm () {
+  if (!formData.value.code || !formData.value.name || !formData.value.type) {
+    drawer.error.value = 'Code, name, and type are required'
+    return
+  }
+  drawer.saving.value = true
+  drawer.error.value = null
+  try {
+    if (drawer.isEdit() && drawer.editing.value) {
+      await store.updateAccount(drawer.editing.value.id, formData.value)
+    } else {
+      await store.createAccount({ tenantId: user.value!.tenantId, ...formData.value })
+    }
+    await load()
+    drawer.close()
+  } catch (e: any) {
+    drawer.error.value = e?.data?.message || 'Failed to save account'
+  } finally { drawer.saving.value = false }
 }
 
 onMounted(load)

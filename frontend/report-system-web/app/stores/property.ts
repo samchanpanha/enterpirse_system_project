@@ -64,6 +64,20 @@ export const usePropertyStore = defineStore('property', () => {
     }
   }
 
+  const updateProperty = async (id: string, data: Partial<Property>) => {
+    const updated = await branchStore.$apiWithBranch<Property>(`/property/properties/${id}`, { method: 'PUT', body: data })
+    const idx = properties.value.findIndex(p => p.id === id)
+    if (idx >= 0) { properties.value[idx] = updated }
+    if (currentProperty.value?.id === id) { currentProperty.value = updated }
+    return updated
+  }
+
+  const deleteProperty = async (id: string) => {
+    await branchStore.$apiWithBranch(`/property/properties/${id}`, { method: 'DELETE' })
+    properties.value = properties.value.filter(p => p.id !== id)
+    if (currentProperty.value?.id === id) { currentProperty.value = null }
+  }
+
   const createLease = async (lease: Partial<Lease>) => {
     const created = await branchStore.$apiWithBranch<Lease>('/property/leases', {
       method: 'POST',
@@ -86,6 +100,8 @@ export const usePropertyStore = defineStore('property', () => {
     fetchUnits,
     createUnit,
     fetchLeases,
-    createLease
+    createLease,
+    updateProperty,
+    deleteProperty
   }
 })

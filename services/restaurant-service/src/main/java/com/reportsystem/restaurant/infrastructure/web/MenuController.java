@@ -22,12 +22,19 @@ public class MenuController {
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 menuService.createCategory(UUID.fromString((String)b.get("tenantId")),
                         bid,
-                        UUID.fromString((String)b.get("outletId")),
-                        (String)b.get("name"), (int)b.getOrDefault("sortOrder", 0)));
+                        UUID.fromString((String)b.get("outletId")), (String)b.get("name"),
+                        b.get("sortOrder") != null ? ((Number)b.get("sortOrder")).intValue() : 0));
     }
-    @GetMapping("/categories/{tenantId}/{outletId}")
-    public ResponseEntity<List<Category>> getCategories(@PathVariable UUID tenantId, @PathVariable UUID outletId) {
+    @GetMapping("/categories") public ResponseEntity<List<Category>> getCategories(@RequestParam UUID tenantId, @RequestParam UUID outletId) {
         return ResponseEntity.ok(menuService.getCategories(tenantId, outletId));
+    }
+    @PutMapping("/categories/{id}") public ResponseEntity<Category> updateCategory(@PathVariable UUID id, @RequestBody Map<String, Object> b) {
+        return ResponseEntity.ok(menuService.updateCategory(id, (String)b.get("name"),
+                b.get("sortOrder") != null ? ((Number)b.get("sortOrder")).intValue() : 0));
+    }
+    @DeleteMapping("/categories/{id}") public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
+        menuService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
     }
     @PostMapping("/items")
     public ResponseEntity<MenuItem> createItem(@RequestHeader(value = "X-Branch-Id", required = false) String branchId,

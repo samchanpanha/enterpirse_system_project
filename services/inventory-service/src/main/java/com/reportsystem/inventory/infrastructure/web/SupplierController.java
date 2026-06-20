@@ -26,4 +26,12 @@ public class SupplierController {
         }
         return ResponseEntity.ok(supplierService.getSuppliersByTenant(tenantId));
     }
+    @PutMapping("/{id}") public ResponseEntity<Supplier> update(@PathVariable UUID id, @RequestBody Map<String, Object> b) {
+        boolean active = b.getOrDefault("active", true) instanceof Boolean ? (Boolean) b.get("active") : true;
+        return ResponseEntity.ok(supplierService.updateSupplier(id, (String) b.get("name"), (String) b.get("phone"), active));
+    }
+    @DeleteMapping("/{id}") public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        supplierService.deleteSupplier(id);
+        return ResponseEntity.noContent().build();
+    }
 }

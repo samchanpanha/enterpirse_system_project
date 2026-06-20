@@ -38,6 +38,16 @@ export const useInventoryStore = defineStore('inventory', () => {
     suppliers.value.push(s)
     return s
   }
+  async function updateSupplier (id: string, data: Partial<Supplier>) {
+    const s = await branchStore.$apiWithBranch<Supplier>(`/inventory/suppliers/${id}`, { method: 'PUT', body: data })
+    const idx = suppliers.value.findIndex(x => x.id === id)
+    if (idx >= 0) { suppliers.value[idx] = s }
+    return s
+  }
+  async function deleteSupplier (id: string) {
+    await branchStore.$apiWithBranch(`/inventory/suppliers/${id}`, { method: 'DELETE' })
+    suppliers.value = suppliers.value.filter(s => s.id !== id)
+  }
 
   async function fetchPurchaseOrders (tenantId: string) {
     loading.value = true
@@ -53,6 +63,12 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
   async function receivePurchaseOrder (poId: string) {
     const po = await branchStore.$apiWithBranch(`/inventory/purchase-orders/${poId}/receive`, { method: 'POST' })
+    const idx = purchaseOrders.value.findIndex(i => i.id === poId)
+    if (idx >= 0) { purchaseOrders.value[idx] = po }
+    return po
+  }
+  async function cancelPurchaseOrder (poId: string) {
+    const po = await branchStore.$apiWithBranch(`/inventory/purchase-orders/${poId}/cancel`, { method: 'POST' })
     const idx = purchaseOrders.value.findIndex(i => i.id === poId)
     if (idx >= 0) { purchaseOrders.value[idx] = po }
     return po
@@ -130,10 +146,13 @@ export const useInventoryStore = defineStore('inventory', () => {
     updateProduct,
     fetchSuppliers,
     createSupplier,
+    updateSupplier,
+    deleteSupplier,
     fetchPurchaseOrders,
     createPurchaseOrder,
     addPoItem,
     receivePurchaseOrder,
+    cancelPurchaseOrder,
     createStockEntry,
     createStockExit,
     getStock,

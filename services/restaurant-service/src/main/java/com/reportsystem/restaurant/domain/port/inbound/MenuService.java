@@ -8,6 +8,8 @@ import java.util.UUID;
 public interface MenuService {
     Category createCategory(UUID tenantId, UUID branchId, UUID outletId, String name, int sortOrder);
     List<Category> getCategories(UUID tenantId, UUID outletId);
+    Category updateCategory(UUID id, String name, int sortOrder);
+    void deleteCategory(UUID id);
     MenuItem createMenuItem(UUID tenantId, UUID branchId, UUID categoryId, String name, java.math.BigDecimal price, java.math.BigDecimal taxRate);
     Optional<MenuItem> getMenuItemById(UUID id);
     List<MenuItem> getMenuItemsByCategory(UUID categoryId);

@@ -35,6 +35,31 @@ public class MenuServiceImpl implements MenuService {
     }
 
     @Override
+    public Category updateCategory(UUID id, String name, int sortOrder) {
+        Category existing = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Category not found: " + id));
+        Category updated = Category.builder()
+                .id(existing.getId()).tenantId(existing.getTenantId()).branchId(existing.getBranchId())
+                .outletId(existing.getOutletId())
+                .name(name != null ? name : existing.getName())
+                .description(existing.getDescription())
+                .sortOrder(sortOrder >= 0 ? sortOrder : existing.getSortOrder())
+                .active(existing.isActive()).createdAt(existing.getCreatedAt()).build();
+        return categoryRepository.save(updated);
+    }
+
+    @Override
+    public void deleteCategory(UUID id) {
+        categoryRepository.findById(id).ifPresent(cat -> {
+            Category deactivated = Category.builder()
+                    .id(cat.getId()).tenantId(cat.getTenantId()).branchId(cat.getBranchId())
+                    .outletId(cat.getOutletId()).name(cat.getName()).description(cat.getDescription())
+                    .sortOrder(cat.getSortOrder()).active(false).createdAt(cat.getCreatedAt()).build();
+            categoryRepository.save(deactivated);
+        });
+    }
+
+    @Override
     public MenuItem createMenuItem(UUID tenantId, UUID branchId, UUID categoryId, String name, BigDecimal price, BigDecimal taxRate) {
         MenuItem item = MenuItem.builder()
                 .id(UUID.randomUUID()).tenantId(tenantId).branchId(branchId).categoryId(categoryId)

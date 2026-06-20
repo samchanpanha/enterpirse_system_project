@@ -233,7 +233,9 @@ async function save (data: any) {
   try {
     const body = { tenantId: user.value!.tenantId, ...data }
     if (drawer.isEdit() && drawer.editing.value) {
-      // TODO: wire update endpoint
+      await store.updateSupplier(drawer.editing.value.id, {
+        name: data.name, phone: data.phone, email: data.email, active: data.active
+      })
     } else {
       await store.createSupplier(body as any)
     }
@@ -249,7 +251,7 @@ async function save (data: any) {
 async function del (s: Supplier) {
   if (!confirm(`Delete supplier "${s.name}"?`)) { return }
   try {
-    // TODO: wire delete endpoint
+    await store.deleteSupplier(s.id)
     await load()
   } catch (e: any) {
     alert(e?.data?.message || 'Failed to delete supplier')

@@ -238,7 +238,9 @@ async function save (data: any) {
       ...data
     }
     if (drawer.isEdit() && drawer.editing.value) {
-      // TODO: wire update endpoint
+      await store.updateCustomer(drawer.editing.value.id, {
+        name: data.name, phone: data.phone, email: data.email, vip: data.vip
+      })
     } else {
       await store.createCustomer(body as any)
     }

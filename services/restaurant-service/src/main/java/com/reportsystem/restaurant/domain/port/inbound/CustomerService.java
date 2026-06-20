@@ -11,4 +11,5 @@ public interface CustomerService {
     Optional<Customer> findCustomerByPhone(UUID tenantId, String phone);
     List<Customer> getCustomersByOutlet(UUID outletId);
     Customer updateVisit(UUID id);
+    Customer updateCustomer(UUID id, String name, String phone, String email, boolean vip);
 }

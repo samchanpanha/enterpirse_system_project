@@ -12,6 +12,7 @@ public interface AccountingService {
     Optional<Account> getAccountById(UUID id);
     List<Account> getAccountsByTenant(UUID tenantId);
     List<Account> getAccountsByTenantAndBranch(UUID tenantId, UUID branchId);
+    Account updateAccount(UUID id, String code, String name, String type, boolean active);
     JournalEntry postJournalEntry(UUID tenantId, UUID branchId, LocalDate entryDate, String description, String referenceType, UUID referenceId, UUID createdBy, List<JournalEntryLine> lines);
     Optional<JournalEntry> getJournalEntryById(UUID id);
     List<JournalEntry> getJournalEntriesByTenant(UUID tenantId);

@@ -10,4 +10,5 @@ public interface SupplierRepository {
     Optional<Supplier> findById(UUID id);
     List<Supplier> findByTenantId(UUID tenantId);
     List<Supplier> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+    void deleteById(UUID id);
 }

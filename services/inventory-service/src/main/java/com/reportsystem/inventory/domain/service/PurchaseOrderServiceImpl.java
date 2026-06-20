@@ -48,4 +48,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .orderDate(po.getOrderDate()).currency(po.getCurrency()).subtotal(po.getSubtotal()).total(po.getTotal())
                 .createdAt(po.getCreatedAt()).build());
     }
+    @Override public PurchaseOrder cancelPO(UUID id) {
+        PurchaseOrder po = poRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("PO not found: " + id));
+        return poRepo.save(PurchaseOrder.builder().id(po.getId()).tenantId(po.getTenantId()).branchId(po.getBranchId()).supplierId(po.getSupplierId())
+                .poNumber(po.getPoNumber()).status("cancelled").orderDate(po.getOrderDate()).currency(po.getCurrency())
+                .subtotal(po.getSubtotal()).total(po.getTotal()).createdAt(po.getCreatedAt()).build());
+    }
 }
