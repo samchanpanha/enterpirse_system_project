@@ -23,4 +23,14 @@ export const propertyRoutes: Routes = [
     loadComponent: () =>
       import('./property-form.component').then((m) => m.PropertyFormComponent),
   },
+  {
+    path: 'leases',
+    loadComponent: () =>
+      import('./lease-list.component').then((m) => m.LeaseListComponent),
+  },
+  {
+    path: 'maintenance',
+    loadComponent: () =>
+      import('./maintenance-list.component').then((m) => m.MaintenanceListComponent),
+  },
 ];

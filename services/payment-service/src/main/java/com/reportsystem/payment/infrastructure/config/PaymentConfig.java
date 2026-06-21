@@ -1,5 +1,6 @@
 package com.reportsystem.payment.infrastructure.config;
 
+import com.reportsystem.payment.domain.port.inbound.PaymentGatewayConfigService;
 import com.reportsystem.payment.domain.port.outbound.*;
 import com.reportsystem.payment.domain.service.*;
 import com.reportsystem.payment.infrastructure.gateway.*;
@@ -17,10 +18,12 @@ public class PaymentConfig {
     private final JpaGatewayLogRepository logRepo;
     private final JpaRefundRepository refundRepo;
     private final JpaReconciliationRecordRepository recRepo;
+    private final JpaPaymentGatewayConfigRepository gwConfigRepo;
 
     public PaymentConfig(JpaTransactionRepository txr, JpaGatewayLogRepository lr,
-                         JpaRefundRepository rfr, JpaReconciliationRecordRepository rcr) {
-        txRepo = txr; logRepo = lr; refundRepo = rfr; recRepo = rcr;
+                         JpaRefundRepository rfr, JpaReconciliationRecordRepository rcr,
+                         JpaPaymentGatewayConfigRepository gcr) {
+        txRepo = txr; logRepo = lr; refundRepo = rfr; recRepo = rcr; gwConfigRepo = gcr;
     }
 
     @Bean public TransactionRepository transactionRepository() { return new JpaTransactionAdapter(txRepo); }
@@ -48,4 +51,6 @@ public class PaymentConfig {
 
     @Bean public PaymentServiceImpl paymentService(TransactionRepository txr, RefundRepository rfr, GatewayLogRepository lgr, PaymentGatewayRouter r) { return new PaymentServiceImpl(txr, rfr, lgr, r); }
     @Bean public ReconciliationServiceImpl reconciliationService(ReconciliationRecordRepository rr) { return new ReconciliationServiceImpl(rr); }
+    @Bean public PaymentGatewayConfigRepository paymentGatewayConfigRepository() { return new JpaPaymentGatewayConfigAdapter(gwConfigRepo); }
+    @Bean public PaymentGatewayConfigService paymentGatewayConfigService(PaymentGatewayConfigRepository r) { return new PaymentGatewayConfigServiceImpl(r); }
 }

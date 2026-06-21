@@ -3,7 +3,6 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +22,6 @@ import { Order } from './models/order.model';
     TableModule,
     ButtonModule,
     TagModule,
-    DialogModule,
     InputTextModule,
     SelectModule,
     ToastModule,
@@ -119,7 +117,7 @@ export class OrderListComponent implements OnInit {
         this.orders = res;
         this.loading = false;
       },
-      error: () => (this.loading = false),
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load orders' }); },
     });
   }
 

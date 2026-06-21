@@ -11,4 +11,5 @@ public interface ProductService {
     List<Product> getProductsByTenant(UUID tenantId);
     List<Product> getProductsByTenantAndBranch(UUID tenantId, UUID branchId);
     Product updateProduct(UUID id, String name, java.math.BigDecimal price, boolean active);
+    Optional<Product> getProductByBarcode(String barcode);
 }

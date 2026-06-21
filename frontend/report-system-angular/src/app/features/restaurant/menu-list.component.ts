@@ -28,6 +28,7 @@ import { Category, MenuItem, CategoryRequest, MenuItemRequest } from './models/m
     SelectModule,
     ToastModule,
   ],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex justify-content-between align-items-center mb-2">
@@ -60,7 +61,6 @@ import { Category, MenuItem, CategoryRequest, MenuItemRequest } from './models/m
       }
     </div>
 
-    @if (showCatDialog) {
       <p-dialog
         [(visible)]="showCatDialog"
         header="New Category"
@@ -73,9 +73,7 @@ import { Category, MenuItem, CategoryRequest, MenuItemRequest } from './models/m
           <p-button label="Create" (onClick)="createCategory()" />
         </div>
       </p-dialog>
-    }
 
-    @if (showItemDialog) {
       <p-dialog
         [(visible)]="showItemDialog"
         header="New Menu Item"
@@ -102,7 +100,6 @@ import { Category, MenuItem, CategoryRequest, MenuItemRequest } from './models/m
           <p-button label="Save" [loading]="saving" (onClick)="createItem()" />
         </div>
       </p-dialog>
-    }
 
     <p-table [value]="items" [loading]="loadingItems" size="small" styleClass="p-datatable-striped">
       <ng-template pTemplate="header">
@@ -185,7 +182,7 @@ export class MenuListComponent implements OnInit {
         this.items = res;
         this.loadingItems = false;
       },
-      error: () => (this.loadingItems = false),
+      error: () => { this.loadingItems = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load items' }); },
     });
   }
 

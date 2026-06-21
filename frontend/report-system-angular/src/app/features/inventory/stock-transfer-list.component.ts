@@ -83,7 +83,7 @@ export class StockTransferListComponent implements OnInit {
     this.loading = true;
     this.api.getTransfers().subscribe({
       next: (res) => { this.transfers = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load transfers' }); },
     });
   }
 

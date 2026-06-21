@@ -11,4 +11,14 @@ export const restaurantRoutes: Routes = [
     loadComponent: () =>
       import('./outlet-detail.component').then((m) => m.OutletDetailComponent),
   },
+  {
+    path: 'customers',
+    loadComponent: () =>
+      import('./customer-list.component').then((m) => m.CustomerListComponent),
+  },
+  {
+    path: 'reservations',
+    loadComponent: () =>
+      import('./reservation-list.component').then((m) => m.ReservationListComponent),
+  },
 ];

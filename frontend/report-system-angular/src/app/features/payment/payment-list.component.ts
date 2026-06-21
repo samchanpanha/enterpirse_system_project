@@ -16,6 +16,7 @@ import { PaymentTransaction, ReconciliationRequest } from './models/payment.mode
   selector: 'app-payment-list',
   standalone: true,
   imports: [CurrencyPipe, DatePipe, FormsModule, TableModule, SelectModule, ButtonModule, InputTextModule, TagModule, DialogModule, ToastModule],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex align-items-center justify-content-between mb-3">
@@ -34,7 +35,6 @@ import { PaymentTransaction, ReconciliationRequest } from './models/payment.mode
       </div>
     </div>
 
-    @if (reconcileDialog) {
       <p-dialog
         [(visible)]="reconcileDialog"
         header="Reconcile Transactions"
@@ -58,7 +58,6 @@ import { PaymentTransaction, ReconciliationRequest } from './models/payment.mode
           <p-button label="Run Reconciliation" [loading]="reconciling" (onClick)="runReconciliation()" />
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="transactions"

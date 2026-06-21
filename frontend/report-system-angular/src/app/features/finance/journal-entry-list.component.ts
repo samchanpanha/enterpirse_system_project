@@ -18,6 +18,7 @@ import { Account } from './models/account.model';
   selector: 'app-journal-entry-list',
   standalone: true,
   imports: [CurrencyPipe, DatePipe, FormsModule, TableModule, SelectModule, ButtonModule, TagModule, DialogModule, ToastModule, InputTextModule, InputNumberModule],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex align-items-center justify-content-between mb-3">
@@ -25,7 +26,6 @@ import { Account } from './models/account.model';
       <p-button label="New Entry" icon="pi pi-plus" severity="success" (onClick)="showNewForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         header="New Journal Entry"
@@ -92,7 +92,6 @@ import { Account } from './models/account.model';
           </div>
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="entries"
@@ -172,7 +171,7 @@ export class JournalEntryListComponent implements OnInit {
     this.loading = true;
     this.api.getJournalEntries().subscribe({
       next: (res) => { this.entries = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load journal entries' }); },
     });
   }
 

@@ -39,6 +39,7 @@ SERVICES=(
   eureka gateway
   auth-service property-service restaurant-service inventory-service
   finance-service payment-service reporting-service
+  delivery-service realty-service
 )
 
 # ─── Colors ──────────────────────────────────────────────────────────────────
@@ -151,7 +152,7 @@ local_status() {
   log "Service URLs:"
   echo "  • Eureka       →  http://localhost:8761"
   echo "  • API Gateway  →  http://localhost:8080"
-  echo "  • Nuxt Web     →  http://localhost:3000"
+  echo "  • Angular Web  →  http://localhost:4200"
   echo "  • MinIO UI     →  http://localhost:9001  (minioadmin / minioadmin)"
   echo "  • Zipkin       →  http://localhost:9411"
 }
@@ -167,13 +168,14 @@ local_clean() {
 }
 
 wait_for_healthy() {
-  log "Waiting for services to become healthy (max 180s)..."
+  log "Waiting for services to become healthy (max 360s)..."
+  log "Note: Services use start_period for graceful startup. Full stack may take 3-5 minutes."
   local elapsed=0
   local ready_count=0
   local target_count
   target_count=$(compose_cmd "$COMPOSE_FILE" config --services 2>/dev/null | wc -l | tr -d ' ')
 
-  while [[ $elapsed -lt 180 ]]; do
+  while [[ $elapsed -lt 360 ]]; do
     ready_count=$(compose_cmd "$COMPOSE_FILE" ps --format json 2>/dev/null \
       | python3 -c "
 import sys, json
@@ -202,7 +204,7 @@ print(ready)
     elapsed=$((elapsed + 5))
     echo -n "."
   done
-  warn "Timeout: $ready_count/$target_count services ready after 180s"
+  warn "Timeout: $ready_count/$target_count services ready after 360s"
   warn "Run '$0 local logs' to inspect"
 }
 

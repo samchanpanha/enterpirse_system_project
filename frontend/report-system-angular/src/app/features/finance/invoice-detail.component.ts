@@ -24,7 +24,7 @@ import { Invoice, InvoicePaymentRequest } from './models/invoice.model';
       <button class="p-2 border-none bg-transparent cursor-pointer text-gray-500 hover:text-gray-700"
         (click)="router.navigate(['/finance'])"><i class="pi pi-arrow-left text-xl"></i></button>
       <h2 class="text-xl font-bold m-0">Invoice {{ invoice?.invoiceNumber }}</h2>
-      <p-tag *ngIf="invoice" [value]="invoice!.status" [severity]="severity(invoice!.status)" />
+      @if (invoice) { <p-tag [value]="invoice.status" [severity]="severity(invoice.status)" /> }
     </div>
 
     @if (invoice) {
@@ -142,7 +142,7 @@ export class InvoiceDetailComponent implements OnInit {
     this.loading = true;
     this.api.getInvoice(id).subscribe({
       next: (res) => { this.invoice = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load invoice' }); },
     });
   }
 

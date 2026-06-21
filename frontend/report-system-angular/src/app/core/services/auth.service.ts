@@ -59,7 +59,7 @@ export class AuthService {
   }
 
   private setSession(res: LoginResponse) {
-    localStorage.setItem(this.TOKEN_KEY, res.token);
+    localStorage.setItem(this.TOKEN_KEY, res.accessToken);
     localStorage.setItem(this.REFRESH_KEY, res.refreshToken);
     localStorage.setItem(this.USER_KEY, JSON.stringify(res.user));
     this.user.set(res.user);

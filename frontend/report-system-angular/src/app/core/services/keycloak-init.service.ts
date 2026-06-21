@@ -1,5 +1,5 @@
 import { KeycloakService } from 'keycloak-angular';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 export function initializeKeycloak(keycloak: KeycloakService) {
   return () =>
@@ -12,7 +12,7 @@ export function initializeKeycloak(keycloak: KeycloakService) {
       initOptions: {
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri:
-          window.location.origin + '/assets/silent-check-sso.html',
+          window.location.origin + '/silent-check-sso.html',
         checkLoginIframe: false,
       },
       loadUserProfileAtStartUp: false,

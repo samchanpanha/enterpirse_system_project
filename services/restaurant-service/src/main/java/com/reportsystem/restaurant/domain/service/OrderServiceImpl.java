@@ -31,7 +31,7 @@ public class OrderServiceImpl implements OrderService {
                 .orderNumber(orderNumber).type(type != null ? type : "dine_in")
                 .status("pending").subtotal(BigDecimal.ZERO).discount(BigDecimal.ZERO)
                 .taxAmount(BigDecimal.ZERO).serviceCharge(BigDecimal.ZERO).total(BigDecimal.ZERO)
-                .paymentStatus("unpaid").notes(notes).servedBy(servedBy)
+                .paymentStatus("unpaid").paymentMethod(null).notes(notes).servedBy(servedBy)
                 .createdAt(Instant.now()).build();
         return orderRepository.save(order);
     }
@@ -99,10 +99,37 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(existing.getSubtotal()).discount(existing.getDiscount())
                 .taxAmount(existing.getTaxAmount()).serviceCharge(existing.getServiceCharge())
                 .total(existing.getTotal()).paymentStatus(existing.getPaymentStatus())
+                .paymentMethod(existing.getPaymentMethod()).discountType(existing.getDiscountType())
                 .notes(existing.getNotes()).servedBy(existing.getServedBy())
                 .createdAt(existing.getCreatedAt()).completedAt(existing.getCompletedAt())
                 .build();
         return orderRepository.save(updated);
+    }
+
+    @Override
+    public Order updateOrderDiscount(UUID id, BigDecimal discount, String discountType) {
+        Order existing = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + id));
+        Order updated = Order.builder()
+                .id(existing.getId()).tenantId(existing.getTenantId()).outletId(existing.getOutletId())
+                .tableId(existing.getTableId()).customerId(existing.getCustomerId())
+                .orderNumber(existing.getOrderNumber()).type(existing.getType()).status(existing.getStatus())
+                .subtotal(existing.getSubtotal())
+                .discount(discount != null ? discount : BigDecimal.ZERO)
+                .discountType(discountType)
+                .taxAmount(existing.getTaxAmount()).serviceCharge(existing.getServiceCharge())
+                .total(existing.getTotal()).paymentStatus(existing.getPaymentStatus())
+                .paymentMethod(existing.getPaymentMethod())
+                .notes(existing.getNotes()).servedBy(existing.getServedBy())
+                .createdAt(existing.getCreatedAt()).completedAt(existing.getCompletedAt())
+                .build();
+        return orderRepository.save(updated);
+    }
+
+    @Override
+    public Order updateOrderItemStatus(UUID orderItemId, String status) {
+        orderItemRepository.updateStatus(orderItemId, status);
+        return null;
     }
 
     @Override
@@ -119,7 +146,9 @@ public class OrderServiceImpl implements OrderService {
                 .serviceCharge(serviceCharge != null ? serviceCharge : BigDecimal.ZERO)
                 .total(existing.getSubtotal().subtract(discount != null ? discount : BigDecimal.ZERO)
                         .add(existing.getTaxAmount()).add(serviceCharge != null ? serviceCharge : BigDecimal.ZERO))
-                .paymentStatus("paid").notes(existing.getNotes()).servedBy(existing.getServedBy())
+                .paymentMethod(paymentMethod).paymentStatus("paid")
+                .discountType(existing.getDiscountType())
+                .notes(existing.getNotes()).servedBy(existing.getServedBy())
                 .createdAt(existing.getCreatedAt()).completedAt(Instant.now())
                 .build();
         return orderRepository.save(updated);
@@ -143,6 +172,7 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(subtotal).discount(order.getDiscount()).taxAmount(tax)
                 .serviceCharge(order.getServiceCharge())
                 .total(subtotal.add(tax)).paymentStatus(order.getPaymentStatus())
+                .paymentMethod(order.getPaymentMethod()).discountType(order.getDiscountType())
                 .notes(order.getNotes()).servedBy(order.getServedBy())
                 .createdAt(order.getCreatedAt()).completedAt(order.getCompletedAt())
                 .build();

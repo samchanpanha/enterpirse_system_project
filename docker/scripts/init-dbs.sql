@@ -8,3 +8,5 @@ CREATE DATABASE inventory_db;
 CREATE DATABASE finance_db;
 CREATE DATABASE payment_db;
 CREATE DATABASE reporting_db;
+CREATE DATABASE delivery_db;
+CREATE DATABASE realty_db;

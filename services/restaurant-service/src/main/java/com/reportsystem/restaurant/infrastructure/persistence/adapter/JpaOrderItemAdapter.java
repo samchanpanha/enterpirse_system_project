@@ -46,6 +46,14 @@ public class JpaOrderItemAdapter implements OrderItemRepository {
         repo.deleteById(id);
     }
 
+    @Override
+    public void updateStatus(UUID id, String status) {
+        repo.findById(id).ifPresent(e -> {
+            e.setStatus(status);
+            repo.save(e);
+        });
+    }
+
     private OrderItem toDomain(OrderItemEntity e) {
         return OrderItem.builder()
                 .id(e.getId()).orderId(e.getOrderId()).menuItemId(e.getMenuItemId())

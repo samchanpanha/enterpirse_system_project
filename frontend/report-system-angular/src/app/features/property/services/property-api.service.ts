@@ -170,4 +170,24 @@ export class PropertyApiService {
       data ?? {},
     );
   }
+
+  getMaintenanceTickets(): Observable<MaintenanceTicket[]> {
+    return this.http.get<MaintenanceTicket[]>(
+      `${this.base}/maintenance/by-tenant/${this.tenantId}`,
+    );
+  }
+
+  createMaintenanceTicket(data: any): Observable<MaintenanceTicket> {
+    return this.http.post<MaintenanceTicket>(`${this.base}/maintenance`, {
+      ...data,
+      tenantId: this.tenantId,
+    });
+  }
+
+  updateMaintenanceStatus(id: string, status: string): Observable<MaintenanceTicket> {
+    return this.http.put<MaintenanceTicket>(
+      `${this.base}/maintenance/${id}/status`,
+      { status },
+    );
+  }
 }

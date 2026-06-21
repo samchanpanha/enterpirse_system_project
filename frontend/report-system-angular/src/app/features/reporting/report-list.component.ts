@@ -17,6 +17,7 @@ import { DashboardSummary } from './models/report.model';
   selector: 'app-report-list',
   standalone: true,
   imports: [DecimalPipe, DatePipe, FormsModule, TableModule, SelectModule, ButtonModule, InputTextModule, TagModule, DialogModule, ToastModule],
+  providers: [MessageService],
   template: `
     <p-toast />
 
@@ -54,7 +55,6 @@ import { DashboardSummary } from './models/report.model';
       <p-button label="Generate Report" icon="pi pi-plus" severity="success" (onClick)="showGenerateForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         header="Generate Report"
@@ -89,7 +89,6 @@ import { DashboardSummary } from './models/report.model';
           <p-button label="Generate" [loading]="generating" (onClick)="generate()" />
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="reports"
@@ -180,7 +179,7 @@ export class ReportListComponent implements OnInit {
     this.loading = true;
     this.api.getReports().subscribe({
       next: (res) => { this.reports = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load reports' }); },
     });
   }
 

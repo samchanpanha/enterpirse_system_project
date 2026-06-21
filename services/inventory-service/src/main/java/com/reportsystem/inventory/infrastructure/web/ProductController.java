@@ -22,6 +22,9 @@ public class ProductController {
                 new java.math.BigDecimal(b.get("unitPrice").toString()),
                 b.get("costPrice") != null ? new java.math.BigDecimal(b.get("costPrice").toString()) : null));
     }
+    @GetMapping("/barcode/{barcode}") public ResponseEntity<Product> getByBarcode(@PathVariable String barcode) {
+        return productService.getProductByBarcode(barcode).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
     @GetMapping("/{id}") public ResponseEntity<Product> get(@PathVariable UUID id) {
         return productService.getProductById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }

@@ -29,6 +29,13 @@ export const inventoryRoutes: Routes = [
       ),
   },
   {
+    path: 'purchase-orders/:id',
+    loadComponent: () =>
+      import('./purchase-order-detail.component').then(
+        (m) => m.PurchaseOrderDetailComponent,
+      ),
+  },
+  {
     path: 'transfers',
     loadComponent: () =>
       import('./stock-transfer-list.component').then(

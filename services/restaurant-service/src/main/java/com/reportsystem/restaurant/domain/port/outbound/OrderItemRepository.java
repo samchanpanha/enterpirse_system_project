@@ -10,4 +10,5 @@ public interface OrderItemRepository {
     Optional<OrderItem> findById(UUID id);
     List<OrderItem> findByOrderId(UUID orderId);
     void deleteById(UUID id);
+    void updateStatus(UUID id, String status);
 }

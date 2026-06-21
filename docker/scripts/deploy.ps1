@@ -46,7 +46,8 @@ if (-not $env:IMAGE_TAG) { $env:IMAGE_TAG = "latest" }
 $Services = @(
     "eureka", "gateway",
     "auth-service", "property-service", "restaurant-service", "inventory-service",
-    "finance-service", "payment-service", "reporting-service"
+    "finance-service", "payment-service", "reporting-service",
+    "delivery-service", "realty-service"
 )
 
 # ─── Output helpers ───────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ function Local-Status {
     Write-Log "Service URLs:"
     Write-Host "  - Eureka       ->  http://localhost:8761"
     Write-Host "  - API Gateway  ->  http://localhost:8080"
-    Write-Host "  - Nuxt Web     ->  http://localhost:3000"
+    Write-Host "  - Angular Web  ->  http://localhost:4200"
     Write-Host "  - MinIO UI     ->  http://localhost:9001  (minioadmin / minioadmin)"
     Write-Host "  - Zipkin       ->  http://localhost:9411"
 }
@@ -185,10 +186,11 @@ function Local-Clean {
 }
 
 function Wait-Healthy {
-    Write-Log "Waiting for services to become healthy (max 180s)..."
+    Write-Log "Waiting for services to become healthy (max 360s)..."
+    Write-Log "Note: Services use start_period for graceful startup. Full stack may take 3-5 minutes."
     $target = (docker compose --project-directory $ProjectRoot -f $ComposeFile config --services 2>$null | Measure-Object).Count
     $elapsed = 0
-    while ($elapsed -lt 180) {
+    while ($elapsed -lt 360) {
         $healthy = 0
         try {
             $services = docker compose --project-directory $ProjectRoot -f $ComposeFile ps --format json 2>$null | ConvertFrom-Json -ErrorAction Stop
@@ -203,7 +205,7 @@ function Wait-Healthy {
         Write-Host "." -NoNewline
     }
     Write-Host ""
-    Write-Warn "Timeout: $healthy/$target services healthy after 180s"
+    Write-Warn "Timeout: $healthy/$target services healthy after 360s"
     Write-Warn "Run '.\deploy.ps1 local logs' to inspect"
 }
 

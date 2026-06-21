@@ -84,7 +84,7 @@ export class PurchaseOrderListComponent implements OnInit {
     this.loading = true;
     this.api.getPurchaseOrders().subscribe({
       next: (res) => { this.orders = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load purchase orders' }); },
     });
   }
 

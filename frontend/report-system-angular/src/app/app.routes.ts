@@ -67,6 +67,34 @@ export const routes: Routes = [
             (m) => m.reportingRoutes,
           ),
       },
+      {
+        path: 'admin',
+        loadChildren: () =>
+          import('./features/admin/admin.routes').then((m) => m.adminRoutes),
+      },
+      {
+        path: 'profile',
+        loadChildren: () =>
+          import('./features/profile/profile.routes').then(
+            (m) => m.profileRoutes,
+          ),
+      },
+      {
+        path: 'delivery',
+        loadChildren: () =>
+          import('./features/delivery/delivery.routes').then((m) => m.deliveryRoutes),
+      },
+      {
+        path: 'realty',
+        loadChildren: () =>
+          import('./features/realty/realty.routes').then((m) => m.realtyRoutes),
+      },
+      {
+        path: 'pos',
+        loadChildren: () =>
+          import('./features/pos/pos.routes').then((m) => m.posRoutes),
+      },
     ],
   },
+  { path: '**', redirectTo: '/dashboard' },
 ];

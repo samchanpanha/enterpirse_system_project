@@ -90,6 +90,10 @@ export class RestaurantApiService {
     return this.http.get<Customer[]>(`${this.base}/customers/by-outlet/${outletId}`);
   }
 
+  getCustomers(): Observable<Customer[]> {
+    return this.http.get<Customer[]>(`${this.base}/customers/by-tenant/${this.tenantId}`);
+  }
+
   createCustomer(data: Customer): Observable<Customer> {
     return this.http.post<Customer>(`${this.base}/customers`, { ...data, tenantId: this.tenantId });
   }
@@ -99,6 +103,10 @@ export class RestaurantApiService {
     return this.http.get<Reservation[]>(
       `${this.base}/reservations/by-outlet/${outletId}${params}`,
     );
+  }
+
+  getReservations(): Observable<Reservation[]> {
+    return this.http.get<Reservation[]>(`${this.base}/reservations/by-tenant/${this.tenantId}`);
   }
 
   createReservation(data: ReservationRequest): Observable<Reservation> {

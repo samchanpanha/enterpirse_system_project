@@ -14,10 +14,13 @@ import { FinanceApiService } from './services/finance-api.service';
 import { Payroll, PayrollRequest } from './models/payroll.model';
 import { Employee } from './models/employee.model';
 
+type EmployeeOption = Employee & { fullName: string };
+
 @Component({
   selector: 'app-payroll-list',
   standalone: true,
   imports: [CurrencyPipe, DatePipe, FormsModule, TableModule, ButtonModule, InputTextModule, InputNumberModule, SelectModule, TagModule, DialogModule, ToastModule],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex align-items-center justify-content-between mb-3">
@@ -25,7 +28,6 @@ import { Employee } from './models/employee.model';
       <p-button label="New Payroll" icon="pi pi-plus" severity="success" (onClick)="showNewForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         header="New Payroll Run"
@@ -88,7 +90,6 @@ import { Employee } from './models/employee.model';
           </div>
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="payrolls"
@@ -144,7 +145,7 @@ import { Employee } from './models/employee.model';
 })
 export class PayrollListComponent implements OnInit {
   payrolls: Payroll[] = [];
-  employees: Employee[] = [];
+  employees: EmployeeOption[] = [];
   loading = false;
   showDialog = false;
   saving = false;
@@ -172,7 +173,7 @@ export class PayrollListComponent implements OnInit {
     this.loading = true;
     this.api.getPayrolls().subscribe({
       next: (res) => { this.payrolls = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load payroll' }); },
     });
   }
 

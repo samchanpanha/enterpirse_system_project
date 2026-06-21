@@ -11,4 +11,5 @@ public interface ProductRepository {
     List<Product> findByTenantId(UUID tenantId);
     List<Product> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
     List<Product> findByCategoryId(UUID categoryId);
+    Optional<Product> findByBarcode(String barcode);
 }

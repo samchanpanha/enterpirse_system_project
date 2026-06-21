@@ -21,6 +21,7 @@ public class ProductServiceImpl implements ProductService {
                 .minStock(BigDecimal.ZERO).tracked(true).active(true).createdAt(Instant.now()).build());
     }
     @Override public Optional<Product> getProductById(UUID id) { return productRepo.findById(id); }
+    @Override public Optional<Product> getProductByBarcode(String barcode) { return productRepo.findByBarcode(barcode); }
     @Override public List<Product> getProductsByTenant(UUID tenantId) { return productRepo.findByTenantId(tenantId); }
     @Override public List<Product> getProductsByTenantAndBranch(UUID tenantId, UUID branchId) { return productRepo.findByTenantIdAndBranchId(tenantId, branchId); }
     @Override public Product updateProduct(UUID id, String name, BigDecimal price, boolean active) {

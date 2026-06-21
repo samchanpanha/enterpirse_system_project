@@ -130,7 +130,7 @@ export class UnitListComponent implements OnInit {
         this.units = res;
         this.loading = false;
       },
-      error: () => (this.loading = false),
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load units' }); },
     });
   }
 

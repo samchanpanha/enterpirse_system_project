@@ -5,7 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { BranchService } from '../../../core/services/branch.service';
 import { Product, ProductRequest } from '../models/product.model';
 import { Supplier, SupplierRequest } from '../models/supplier.model';
-import { PurchaseOrder, PurchaseOrderItemRequest } from '../models/purchase-order.model';
+import { PurchaseOrder, PurchaseOrderItem, PurchaseOrderItemRequest } from '../models/purchase-order.model';
 import { StockTransfer, StockTransferRequest } from '../models/stock-transfer.model';
 
 @Injectable({ providedIn: 'root' })
@@ -89,6 +89,10 @@ export class InventoryApiService {
       ...data,
       tenantId: this.tenantId,
     });
+  }
+
+  getPurchaseOrderItems(poId: string): Observable<PurchaseOrderItem[]> {
+    return this.http.get<PurchaseOrderItem[]>(`${this.base}/purchase-orders/${poId}/items`);
   }
 
   addPurchaseOrderItem(poId: string, data: PurchaseOrderItemRequest): Observable<PurchaseOrder> {

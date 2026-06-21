@@ -15,7 +15,7 @@ import { Supplier, SupplierRequest } from './models/supplier.model';
   selector: 'app-supplier-list',
   standalone: true,
   imports: [FormsModule, TableModule, ButtonModule, InputTextModule, TagModule, ToastModule, DialogModule, ConfirmDialogModule],
-  providers: [ConfirmationService],
+  providers: [ConfirmationService, MessageService],
   template: `
     <p-toast />
     <p-confirmdialog />
@@ -25,7 +25,6 @@ import { Supplier, SupplierRequest } from './models/supplier.model';
       <p-button label="Add Supplier" icon="pi pi-plus" severity="success" (onClick)="showForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         [header]="editingSupplier ? 'Edit Supplier' : 'Add Supplier'"
@@ -42,7 +41,6 @@ import { Supplier, SupplierRequest } from './models/supplier.model';
           <p-button label="Save" [loading]="saving" (onClick)="save()" />
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="suppliers"

@@ -71,6 +71,18 @@ public class RouteConfig {
                 .path("/api/reporting/**")
                 .filters(f -> f.stripPrefix(2))
                 .uri("lb://reporting-service"))
+            .route("delivery-service", r -> r
+                .path("/api/delivery/**")
+                .filters(f -> f.stripPrefix(2))
+                .uri("lb://delivery-service"))
+            .route("realty-service", r -> r
+                .path("/api/realty/**")
+                .filters(f -> f.stripPrefix(2))
+                .uri("lb://realty-service"))
+            .route("pos-service", r -> r
+                .path("/api/pos/**")
+                .filters(f -> f.stripPrefix(2))
+                .uri("lb://restaurant-service"))
             .build();
     }
 }

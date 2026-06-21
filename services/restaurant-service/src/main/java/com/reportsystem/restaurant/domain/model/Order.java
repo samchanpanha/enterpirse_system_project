@@ -22,10 +22,12 @@ public class Order {
     private String status;
     private BigDecimal subtotal;
     private BigDecimal discount;
+    private String discountType;
     private BigDecimal taxAmount;
     private BigDecimal serviceCharge;
     private BigDecimal total;
     private String paymentStatus;
+    private String paymentMethod;
     private String notes;
     private UUID servedBy;
     private final Instant createdAt;

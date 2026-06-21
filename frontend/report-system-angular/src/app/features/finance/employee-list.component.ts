@@ -16,6 +16,7 @@ import { Employee, EmployeeRequest } from './models/employee.model';
   selector: 'app-employee-list',
   standalone: true,
   imports: [CurrencyPipe, FormsModule, TableModule, ButtonModule, InputTextModule, InputNumberModule, TagModule, DialogModule, ToastModule],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex align-items-center justify-content-between mb-3">
@@ -23,7 +24,6 @@ import { Employee, EmployeeRequest } from './models/employee.model';
       <p-button label="Add Employee" icon="pi pi-plus" severity="success" (onClick)="showForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         [header]="editingEmployee ? 'Edit Employee' : 'Add Employee'"
@@ -73,7 +73,6 @@ import { Employee, EmployeeRequest } from './models/employee.model';
           <p-button label="Save" [loading]="saving" (onClick)="save()" />
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="employees"
@@ -147,7 +146,7 @@ export class EmployeeListComponent implements OnInit {
     this.loading = true;
     this.api.getEmployees().subscribe({
       next: (res) => { this.employees = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees' }); },
     });
   }
 

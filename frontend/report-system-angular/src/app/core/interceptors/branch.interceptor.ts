@@ -1,6 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { BranchService } from '../services/branch.service';
+import { environment } from '../../../environments/environment';
 
 export const branchInterceptor: HttpInterceptorFn = (req, next) => {
   const branch = inject(BranchService);
@@ -13,7 +14,7 @@ export const branchInterceptor: HttpInterceptorFn = (req, next) => {
     headers = headers.set('X-Branch-Id', branch.branchId);
   }
 
-  if (branch.branchId) {
+  if (branch.branchId && req.url.startsWith(environment.apiUrl)) {
     const url = new URL(req.url, window.location.origin);
     url.searchParams.set('branchId', branch.branchId);
     req = req.clone({ url: url.toString(), headers });

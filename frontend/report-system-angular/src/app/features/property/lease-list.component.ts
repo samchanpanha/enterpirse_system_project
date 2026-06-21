@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { forkJoin } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { PropertyApiService } from './services/property-api.service';
@@ -135,14 +136,15 @@ export class LeaseListComponent implements OnInit {
           return;
         }
         const unitIds = units.map((u) => u.id);
-        Promise.all(
-          unitIds.map((id) => this.api.getLeasesByUnit(id).toPromise()),
-        ).then((results) => {
-          this.leases = results.flat().filter(Boolean) as Lease[];
-          this.loading = false;
+        forkJoin(unitIds.map((id) => this.api.getLeasesByUnit(id))).subscribe({
+          next: (results) => {
+            this.leases = results.flat().filter(Boolean) as Lease[];
+            this.loading = false;
+          },
+          error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load leases' }); },
         });
       },
-      error: () => (this.loading = false),
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load units' }); },
     });
   }
 

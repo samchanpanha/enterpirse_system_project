@@ -16,6 +16,7 @@ import { Tax, TaxRequest } from './models/tax.model';
   selector: 'app-tax-list',
   standalone: true,
   imports: [FormsModule, TableModule, ButtonModule, InputTextModule, InputNumberModule, SelectModule, TagModule, DialogModule, ToastModule],
+  providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex align-items-center justify-content-between mb-3">
@@ -23,7 +24,6 @@ import { Tax, TaxRequest } from './models/tax.model';
       <p-button label="Add Tax" icon="pi pi-plus" severity="success" (onClick)="showForm()" />
     </div>
 
-    @if (showDialog) {
       <p-dialog
         [(visible)]="showDialog"
         [header]="editingTax ? 'Edit Tax' : 'Add Tax'"
@@ -53,7 +53,6 @@ import { Tax, TaxRequest } from './models/tax.model';
           <p-button label="Save" [loading]="saving" (onClick)="save()" />
         </div>
       </p-dialog>
-    }
 
     <p-table
       [value]="taxes"
@@ -121,7 +120,7 @@ export class TaxListComponent implements OnInit {
     this.loading = true;
     this.api.getTaxes().subscribe({
       next: (res) => { this.taxes = res; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.message.add({ severity: 'error', summary: 'Error', detail: 'Failed to load taxes' }); },
     });
   }
 

@@ -16,5 +16,7 @@ public interface OrderService {
     List<Order> getOrdersByTenantAndBranch(UUID tenantId, UUID branchId);
     Order updateStatus(UUID id, String status);
     Order completeOrder(UUID id, java.math.BigDecimal discount, java.math.BigDecimal serviceCharge, String paymentMethod);
+    Order updateOrderDiscount(UUID id, java.math.BigDecimal discount, String discountType);
+    Order updateOrderItemStatus(UUID orderItemId, String status);
     List<OrderItem> getOrderItems(UUID orderId);
 }
