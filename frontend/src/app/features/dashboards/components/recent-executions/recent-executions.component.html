@@ -1,0 +1,20 @@
+<div class="recent-executions">
+  <div *ngIf="executions.length === 0" class="no-data">
+    <p>No recent executions</p>
+  </div>
+
+  <mat-list *ngIf="executions.length > 0" class="execution-list">
+    <mat-list-item *ngFor="let execution of executions" class="execution-item">
+      <div class="execution-info">
+        <div class="report-name">{{ execution.reportName }}</div>
+        <div class="execution-meta">
+          <span class="executed-by">By: {{ execution.executedBy }}</span>
+          <span class="executed-at">{{ formatDate(execution.executedAt) }}</span>
+        </div>
+      </div>
+      <div class="status-badge" [style.background-color]="getStatusColor(execution.status)">
+        {{ execution.status }}
+      </div>
+    </mat-list-item>
+  </mat-list>
+</div>

@@ -1,0 +1,13 @@
+<mat-card class="metrics-card" [style.border-left]="'4px solid ' + color">
+  <mat-card-content>
+    <div class="content">
+      <div class="icon-wrapper" [style.background-color]="color + '20'">
+        <mat-icon [style.color]="color">{{ icon }}</mat-icon>
+      </div>
+      <div class="metrics-info">
+        <h3 class="title">{{ title }}</h3>
+        <p class="value">{{ value }}{{ suffix }}</p>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

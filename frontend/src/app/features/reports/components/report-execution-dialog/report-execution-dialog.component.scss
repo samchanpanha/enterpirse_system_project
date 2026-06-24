@@ -1,0 +1,44 @@
+.execution-dialog {
+  min-width: 500px;
+  max-width: 700px;
+
+  h2[mat-dialog-title] {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  mat-dialog-content {
+    .description {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .parameter-field {
+      margin-bottom: 16px;
+
+      mat-form-field {
+        width: 100%;
+      }
+
+      mat-checkbox {
+        display: block;
+        margin: 8px 0;
+      }
+    }
+  }
+
+  mat-dialog-actions {
+    padding: 16px 0 0 0;
+
+    button {
+      margin-left: 8px;
+    }
+
+    mat-progress-spinner {
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+  }
+}

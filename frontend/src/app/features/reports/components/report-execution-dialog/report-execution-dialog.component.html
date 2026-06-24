@@ -1,0 +1,83 @@
+<div class="execution-dialog">
+  <h2 mat-dialog-title>Execute Report: {{ report.name }}</h2>
+  
+  <mat-dialog-content>
+    <div *ngIf="hasParameters; else noParams">
+      <p class="description">Please provide values for the report parameters:</p>
+      
+      <form [formGroup]="form">
+        <div *ngFor="let param of parameters" class="parameter-field">
+          <!-- String/Number Input -->
+          <mat-form-field appearance="outline" *ngIf="param.type === 'STRING' || param.type === 'NUMBER'">
+            <mat-label>{{ param.label }}</mat-label>
+            <input 
+              matInput 
+              [type]="param.type === 'NUMBER' ? 'number' : 'text'"
+              [formControlName]="param.name"
+              [placeholder]="'Enter ' + param.label"
+            >
+            <mat-hint *ngIf="param.defaultValue">Default: {{ param.defaultValue }}</mat-hint>
+            <mat-error *ngIf="form.get(param.name)?.hasError('required')">
+              {{ param.label }} is required
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Date Input -->
+          <mat-form-field appearance="outline" *ngIf="param.type === 'DATE'">
+            <mat-label>{{ param.label }}</mat-label>
+            <input 
+              matInput 
+              [matDatepicker]="picker"
+              [formControlName]="param.name"
+            >
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+            <mat-hint *ngIf="param.defaultValue">Default: {{ param.defaultValue }}</mat-hint>
+            <mat-error *ngIf="form.get(param.name)?.hasError('required')">
+              {{ param.label }} is required
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Boolean Input -->
+          <mat-checkbox 
+            *ngIf="param.type === 'BOOLEAN'"
+            [formControlName]="param.name"
+          >
+            {{ param.label }}
+          </mat-checkbox>
+
+          <!-- Select Input -->
+          <mat-form-field appearance="outline" *ngIf="param.type === 'SELECT'">
+            <mat-label>{{ param.label }}</mat-label>
+            <mat-select [formControlName]="param.name">
+              <mat-option *ngFor="let option of param.options" [value]="option.value">
+                {{ option.label }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="form.get(param.name)?.hasError('required')">
+              {{ param.label }} is required
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </form>
+    </div>
+
+    <ng-template #noParams>
+      <p>This report doesn't require any parameters. Click "Execute" to run it.</p>
+    </ng-template>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="executing">Cancel</button>
+    <button mat-raised-button color="primary" (click)="onExecute()" [disabled]="executing || form.invalid">
+      <mat-progress-spinner 
+        *ngIf="executing" 
+        mode="indeterminate" 
+        diameter="18"
+        strokeWidth="2"
+      ></mat-progress-spinner>
+      <span *ngIf="!executing">Execute</span>
+      <span *ngIf="executing">Executing...</span>
+    </button>
+  </mat-dialog-actions>
+</div>
