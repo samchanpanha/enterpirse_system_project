@@ -1,59 +1,60 @@
-# ─── Build outputs ─────────────────────────────────────────────
-target/
-build/
-out/
-*.class
-*.jar
-*.war
-*.ear
-
-# ─── IDE / Editor ─────────────────────────────────────────────
-.idea/
-*.iml
-*.iws
-*.ipr
-.vscode/
-.project
-.classpath
-.settings/
-*.swp
-.DS_Store
-
-# ─── Frontend (Nuxt) ─────────────────────────────────────────
+```
+# Dependencies
 node_modules/
-.nuxt/
-.output/
-.cache/
+julia-*/
+zig*/
+
+# Build artifacts
 dist/
+build/
+target/
 
-# ─── Logs ────────────────────────────────────────────────────
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
 *.log
-logs/
-auth-build.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.tmp
 
-# ─── OS junk ─────────────────────────────────────────────────
-Thumbs.db
-ehthumbs.db
-desktop.ini
+# Java/Maven specific
+.gradle/
+dependency-reduced-pom.xml
+execjars-maven-plugin/
+.m2/
+target/
 
-# ─── Env / secrets ───────────────────────────────────────────
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
 .env
 .env.local
-.env.*.local
-**/.env
-**/.env.local
-*.pem
-*.key
+*.env.*
 
-# ─── Coverage / test outputs ─────────────────────────────────
-coverage/
-.nyc_output/
-*.lcov
-test-results/
-
-# ─── Docker (mounted volumes) ───────────────────────────────
-postgres-data/
-minio-data/
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Icon?
+```
